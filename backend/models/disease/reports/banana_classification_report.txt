@@ -1,0 +1,12 @@
+                     precision    recall  f1-score   support
+
+        Anthracnose       1.00      1.00      1.00       126
+     Black_Sigatoka       0.98      0.98      0.98        90
+            Cordana       1.00      1.00      1.00        25
+            Healthy       1.00      1.00      1.00       178
+Panama_Wilt_Disease       0.78      0.78      0.78         9
+     Pestalotiopsis       1.00      1.00      1.00        26
+
+           accuracy                           0.99       454
+          macro avg       0.96      0.96      0.96       454
+       weighted avg       0.99      0.99      0.99       454
