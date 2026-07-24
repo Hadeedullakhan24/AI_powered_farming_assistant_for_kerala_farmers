@@ -1,0 +1,84 @@
+{
+    "banana": {
+        "classes": {
+            "Anthracnose": 839,
+            "Black_Sigatoka": 599,
+            "Cordana": 162,
+            "Healthy": 1186,
+            "Panama_Wilt_Disease": 54,
+            "Pestalotiopsis": 173
+        },
+        "total_images": 3013,
+        "average_width": 684.71,
+        "average_height": 657.9,
+        "formats": {
+            "JPEG": 3013
+        }
+    },
+    "coconut": {
+        "classes": {
+            "Coconut_Caterpillar": 1785,
+            "Healthy": 123,
+            "WCLWD": 2889
+        },
+        "total_images": 4797,
+        "average_width": 865.4,
+        "average_height": 882.21,
+        "formats": {
+            "JPEG": 4767,
+            "MPO": 30
+        }
+    },
+    "paddy": {
+        "classes": {
+            "bacterial_leaf_blight": 519,
+            "bacterial_leaf_streak": 380,
+            "bacterial_panicle_blight": 337,
+            "blast": 1738,
+            "brown_spot": 1005,
+            "dead_heart": 1442,
+            "downy_mildew": 620,
+            "Healthy": 1764,
+            "hispa": 1594,
+            "Leaf_Smut": 40,
+            "tungro": 1088
+        },
+        "total_images": 10527,
+        "average_width": 501.87,
+        "average_height": 640.93,
+        "formats": {
+            "JPEG": 10527
+        }
+    },
+    "pepper": {
+        "classes": {
+            "Healthy": 273,
+            "Leaf_Blight": 273,
+            "Pollu_Disease": 500,
+            "Quick_Wilt": 500,
+            "Slow_Decline": 500,
+            "Yellow_Mottle_Virus": 273
+        },
+        "total_images": 2319,
+        "average_width": 342.17,
+        "average_height": 342.17,
+        "formats": {
+            "PNG": 865,
+            "JPEG": 1454
+        }
+    },
+    "rubber": {
+        "classes": {
+            "Anthracnose": 300,
+            "Dry_Leaf": 450,
+            "Healthy": 506,
+            "Leaf_Spot": 484
+        },
+        "total_images": 1740,
+        "average_width": 3488.75,
+        "average_height": 3498.2,
+        "formats": {
+            "JPEG": 1740
+        }
+    }
+}

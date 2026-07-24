@@ -1,0 +1,12 @@
+                     precision    recall  f1-score   support
+
+            Healthy       1.00      1.00      1.00        41
+        Leaf_Blight       1.00      1.00      1.00        41
+      Pollu_Disease       1.00      1.00      1.00        75
+         Quick_Wilt       1.00      1.00      1.00        75
+       Slow_Decline       1.00      1.00      1.00        75
+Yellow_Mottle_Virus       1.00      1.00      1.00        41
+
+           accuracy                           1.00       348
+          macro avg       1.00      1.00      1.00       348
+       weighted avg       1.00      1.00      1.00       348
