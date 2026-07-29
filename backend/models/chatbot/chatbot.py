@@ -8,14 +8,23 @@ FAISS + Groq + Conversation Memory
 import os
 
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+# backend/models/chatbot/chatbot.py
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE = BACKEND_DIR / ".env"
+
+print("Loading .env from:", ENV_FILE)
+
+load_dotenv(dotenv_path=ENV_FILE)
+
+print("GROQ_API_KEY:", os.getenv("GROQ_API_KEY"))
 
 from langchain_groq import ChatGroq
 
-from models.chatbot.vector_store import VectorStore
-from models.chatbot.prompts import RAG_PROMPT
-from models.chatbot.memory import ConversationMemory
+from backend.models.chatbot.vector_store import VectorStore
+from backend.models.chatbot.prompts import RAG_PROMPT
+from backend.models.chatbot.memory import ConversationMemory
 
 
 class FarmingChatbot:
@@ -73,24 +82,19 @@ class FarmingChatbot:
 
 
     def retrieve_documents(self, question):
-        """
-        Retrieve diverse relevant documents.
-        """
 
-        return self.vector_store.max_marginal_relevance_search(
+        return self.vector_store.similarity_search_with_score(
             self.db,
             question,
             k=4
         )
 
+        
+
 
     def build_context(self, retrieved_docs):
-        """
-        Build context from retrieved documents.
-        """
 
         context = []
-
         sources = []
 
         for doc, score in retrieved_docs:
@@ -107,7 +111,6 @@ class FarmingChatbot:
             )
 
         return "\n\n".join(context), sources
-
 
     def build_prompt(self, question, context):
         """

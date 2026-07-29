@@ -7,7 +7,7 @@ import torch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
-DATASET_DIR = PROJECT_ROOT /  "backend" / "datasets"
+DATASET_DIR = PROJECT_ROOT /  "backend" / "dataset"
 
 RAW_DATASET_DIR = DATASET_DIR / "disease_detection"
 

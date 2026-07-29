@@ -8,7 +8,7 @@ import os
 
 from langchain_community.vectorstores import FAISS
 
-from models.chatbot.embeddings import get_embeddings
+from backend.models.chatbot.embeddings import get_embeddings
 
 
 class VectorStore:

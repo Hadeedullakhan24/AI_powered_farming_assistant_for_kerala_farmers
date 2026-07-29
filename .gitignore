@@ -37,7 +37,7 @@ logs/
 # ============================================================
 # Datasets
 # ============================================================
-backend/datasets/
+backend/dataset/
 backend/data/
 
 # ============================================================
@@ -99,6 +99,6 @@ dist/
 htmlcov/
 
 backend/models/chatbot/knowledge_base/
-datasets/
+dataset/
 __pycache__/
 *.pyc
