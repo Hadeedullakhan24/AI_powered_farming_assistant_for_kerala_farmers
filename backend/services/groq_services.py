@@ -341,3 +341,180 @@ Never return explanations outside JSON.
         result = result.replace("```", "").strip()
 
     return json.loads(result)
+
+
+def get_market_insight(crop: str, district: str, price_data: list):
+
+    prompt = f"""
+You are India's best agricultural economist and market intelligence expert.
+
+Analyze the following Kerala agricultural market data.
+
+Crop:
+{crop}
+
+District:
+{district}
+
+Market Data:
+{json.dumps(price_data, indent=2)}
+
+Your goal is to maximize the farmer's profit while minimizing risk.
+
+Return ONLY valid JSON.
+
+{{
+    "summary":"",
+    "recommendation":"",
+    "price_trend":"",
+    "demand":"",
+    "supply":"",
+    "best_selling_time":"",
+    "market_score":0,
+    "farmer_action":"",
+    "market_sentiment":"",
+    "profitability":"",
+    "risk_level":"",
+    "price_forecast":"",
+    "key_reason":"",
+    "market_alerts":[
+        "",
+        "",
+        ""
+    ]
+}}
+
+Rules:
+
+1. market_score must be between 0 and 100.
+
+2. price_trend must be exactly one of:
+Rising
+Stable
+Falling
+
+3. demand must be:
+High
+Medium
+Low
+
+4. supply must be:
+High
+Medium
+Low
+
+5. farmer_action must be exactly one of:
+SELL NOW
+SELL THIS WEEK
+WAIT
+STORE CROP
+
+6. market_sentiment:
+Bullish
+Neutral
+Bearish
+
+7. profitability:
+High
+Moderate
+Low
+
+8. risk_level:
+Low
+Medium
+High
+
+9. price_forecast:
+Increasing
+Stable
+Decreasing
+
+10. recommendation must be practical.
+
+11. key_reason should explain the recommendation in one sentence.
+
+12. Generate exactly 3 useful market alerts.
+
+13. Return ONLY JSON.
+
+14. Never use markdown.
+"""
+
+    try:
+
+        response = client.chat.completions.create(
+
+            model="llama-3.3-70b-versatile",
+
+            messages=[
+
+                {
+                    "role": "system",
+                    "content": "You are an expert agricultural market intelligence system."
+                },
+
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+
+            ],
+
+            temperature=0.2,
+
+            max_tokens=1200
+
+        )
+
+        result = response.choices[0].message.content.strip()
+
+        print("\n========== MARKET AI ==========")
+        print(result)
+        print("================================\n")
+
+        if result.startswith("```"):
+            result = result.replace("```json", "")
+            result = result.replace("```", "")
+            result = result.strip()
+
+        return json.loads(result)
+
+    except Exception as e:
+
+        print("Groq Error:", e)
+
+        return {
+
+            "summary": "Market analysis unavailable.",
+
+            "recommendation": "Unable to generate AI recommendation at the moment.",
+
+            "price_trend": "Stable",
+
+            "demand": "Medium",
+
+            "supply": "Medium",
+
+            "best_selling_time": "Current Week",
+
+            "market_score": 50,
+
+            "farmer_action": "WAIT",
+
+            "market_sentiment": "Neutral",
+
+            "profitability": "Moderate",
+
+            "risk_level": "Medium",
+
+            "price_forecast": "Stable",
+
+            "key_reason": "AI response could not be generated.",
+
+            "market_alerts": [
+                "No alerts available.",
+                "Market data is limited.",
+                "Please try again later."
+            ]
+
+        }

@@ -4,11 +4,13 @@ from backend.api.disease_api import router as disease_router
 from backend.api.treatment_api import router as treatment_router
 from backend.api.weather_api import router as weather_router
 from backend.api.crop_advisor_api import router as crop_advisor_router
+from backend.api.market_api import router as market_router
 
 app = FastAPI(
     title="AI Powered Farming Assistant API",
     version="1.0.0",
-    description="Backend API for AI Powered Farming Assistant"
+    description="Backend API for AI Powered Farming Assistant",
+    debug=True
 )
 
 # Allow React frontend to access the API
@@ -47,4 +49,4 @@ app.include_router(
     prefix="/api",
     tags=["Crop Advisor"]
 )
-
+app.include_router(market_router)
