@@ -97,3 +97,8 @@ dist/
 .pytest_cache/
 .coverage
 htmlcov/
+
+backend/models/chatbot/knowledge_base/
+datasets/
+__pycache__/
+*.pyc
