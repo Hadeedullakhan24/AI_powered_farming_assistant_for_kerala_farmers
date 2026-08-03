@@ -53,7 +53,10 @@ build/
 # Datasets
 # ============================================================
 backend/dataset/
+<<<<<<< HEAD
 backend/datasets/
+=======
+>>>>>>> main
 backend/data/
 datasets/
 
@@ -126,4 +129,6 @@ backend/models/chatbot/knowledge_base/
 # ============================================================
 # Python Cache (Extra)
 # ============================================================
+dataset/
+__pycache__/
 *.pyc

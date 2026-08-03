@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from backend.api.chatbot_api import router as chatbot_router
 from backend.api.disease_api import router as disease_router
 from backend.api.treatment_api import router as treatment_router
 from backend.api.weather_api import router as weather_router
@@ -54,3 +55,4 @@ app.include_router(
     assistant_router,
     prefix="/api",
 )
+app.include_router(chatbot_router)
