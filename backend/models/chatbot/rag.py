@@ -10,8 +10,7 @@ import fitz
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from models.chatbot.vector_store import VectorStore
-
+from backend.models.chatbot.vector_store import VectorStore
 
 class RAGBuilder:
 

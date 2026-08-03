@@ -25,7 +25,7 @@ class ModelCheckpoint:
             save_path
         )
 
-        print(f"\n✅ Model saved at: {save_path}")
+        print(f"\n[OK] Model saved at: {save_path}")
 
     def load(self, model, filename, device):
 
@@ -39,6 +39,6 @@ class ModelCheckpoint:
 
         model.load_state_dict(state_dict)
 
-        print(f"\n✅ Model loaded from: {load_path}")
+        print(f"\n[OK] Model loaded from: {load_path}")
 
         return model
