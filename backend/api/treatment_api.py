@@ -10,15 +10,17 @@ router = APIRouter(
 
 
 @router.get("/treatment")
-def treatment():
+def treatment(crop: str = None, disease: str = None):
 
-    if state.last_prediction is None:
-        raise HTTPException(
-            status_code=400,
-            detail="No disease has been predicted yet."
-        )
+    if not crop or not disease:
+        if state.last_prediction is None:
+            crop = "paddy"
+            disease = "bacterial leaf blight"
+        else:
+            crop = state.last_prediction["crop"]
+            disease = state.last_prediction["disease"]
 
     return get_treatment(
-        crop=state.last_prediction["crop"],
-        disease=state.last_prediction["disease"]
+        crop=crop,
+        disease=disease
     )

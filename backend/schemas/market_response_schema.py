@@ -20,6 +20,9 @@ class AIInsight(BaseModel):
     supply: str
     best_selling_time: str
     market_score: int
+    market_sentiment: str = ""
+    price_forecast: str = ""
+    key_reason: str = ""
 
 
 class Profitability(BaseModel):
