@@ -25,3 +25,12 @@ torchvision==0.20.1
 python-dotenv==1.0.1
 requests==2.32.3
 python-multipart==0.0.9
+
+pymongo>=4.6.0
+dnspython>=2.4.0
+bcrypt>=4.0.1
+
+# Voice: speech-to-text (Whisper) and text-to-speech (MMS-TTS)
+# NOTE: torch and transformers already listed above — these are the extra deps
+faster-whisper>=1.0.0
+soundfile>=0.12.1

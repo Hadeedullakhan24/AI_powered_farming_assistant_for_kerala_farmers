@@ -91,6 +91,25 @@
   "pick_location": "मानचित्र पर स्थान चुनें",
   "location_picked": "स्थान चुना गया",
   "no_location": "कृपया पहले एक स्थान चुनें",
+  "assistant_clear": "साफ़ करें",
+  "assistant_online": "AI सहायक · ऑनलाइन",
+  "assistant_suggested": "सुझाए गए प्रश्न:",
+  "assistant_disclaimer": "AI उत्तर सलाहकारी हैं। महत्वपूर्ण निर्णयों के लिए स्थानीय कृषि विशेषज्ञों से सलाह लें।",
+
+  "voice_listening": "सुन रहा है...",
+  "voice_speak": "जोर से पढ़ें",
+  "voice_stop": "रोकें",
+  "voice_error": "माइक उपलब्ध नहीं। अनुमति जांचें।",
+
+  "login_title": "वापिस स्वागत है",
+  "login_subtitle": "अपने HexaKrishi खाते में साइन इन करें",
+  "login_email": "ईमेल पता",
+  "login_password": "पासवर्ड",
+  "login_name": "पूरा नाम",
+  "login_sign_in": "साइन इन",
+  "login_sign_up": "साइन अप",
+  "login_create": "खाता बनाएं",
+
   "footer_team": "टीम HexaKrishi · SIH 2024",
   "footer_links": "त्वरित लिंक",
   "footer_language": "भाषा"

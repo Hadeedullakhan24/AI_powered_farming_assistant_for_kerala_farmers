@@ -7,6 +7,9 @@ from backend.api.weather_api import router as weather_router
 from backend.api.crop_advisor_api import router as crop_advisor_router
 from backend.api.market_api import router as market_router
 from backend.api.assistant_api import router as assistant_router
+from backend.api.government_api import router as government_router
+from backend.api.auth_api import router as auth_router
+from backend.api.voice_api import router as voice_router
 
 app = FastAPI(
     title="AI Powered Farming Assistant API",
@@ -38,6 +41,7 @@ def health():
         "status": "healthy"
     }
 
+app.include_router(auth_router)
 app.include_router(disease_router)
 app.include_router(treatment_router)
 app.include_router(
@@ -55,4 +59,11 @@ app.include_router(
     assistant_router,
     prefix="/api",
 )
+app.include_router(
+    government_router,
+    prefix="/api/government",
+    tags=["Government Schemes & Financial Advisory"]
+)
 app.include_router(chatbot_router)
+app.include_router(voice_router)
+

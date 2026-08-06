@@ -15,6 +15,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2_000)
     conversation_history: list[ChatMessage] = Field(default_factory=list)
+    lang: str = Field(default="en", description="BCP-47 language code for response language")
 
 
 @router.post("/assistant/chat")
@@ -22,4 +23,5 @@ def assistant_chat(request: ChatRequest):
     return get_chat_response(
         message=request.message,
         conversation_history=[item.model_dump() for item in request.conversation_history],
+        lang=request.lang,
     )

@@ -100,6 +100,25 @@
   "location_picked": "Location selected",
   "no_location": "Please pick a location first",
 
+  "assistant_clear": "Clear",
+  "assistant_online": "AI Assistant · Online",
+  "assistant_suggested": "Suggested Questions:",
+  "assistant_disclaimer": "AI responses are advisory. Always consult local agricultural experts for critical decisions.",
+
+  "voice_listening": "Listening...",
+  "voice_speak": "Read aloud",
+  "voice_stop": "Stop",
+  "voice_error": "Microphone unavailable. Please check permissions.",
+
+  "login_title": "Welcome back",
+  "login_subtitle": "Sign in to your HexaKrishi account",
+  "login_email": "Email Address",
+  "login_password": "Password",
+  "login_name": "Full Name",
+  "login_sign_in": "Sign In",
+  "login_sign_up": "Sign Up",
+  "login_create": "Create Account",
+
   "footer_team": "Team HexaKrishi · SIH 2024",
   "footer_links": "Quick Links",
   "footer_language": "Language"

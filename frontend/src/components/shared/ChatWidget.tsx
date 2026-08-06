@@ -4,6 +4,7 @@ import { Send, X, MessageCircle, Bot, Minimize2, Sparkles, RotateCcw } from 'luc
 import { sendChatMessage } from '../../api/endpoints'
 import type { ChatMessage } from '../../api/types'
 import { useLocation } from 'react-router-dom'
+import i18n from '../../i18n'
 
 const QUICK_PROMPTS = [
   '🌾 Best crop for monsoon season?',
@@ -81,6 +82,7 @@ export const ChatWidget = () => {
         const res = await sendChatMessage({
           message: text,
           conversation_history: history.slice(-10),
+          lang: i18n.language || 'en',
         })
         const updated = [...history, { role: 'assistant' as const, content: res.reply }]
         setMessages(updated)

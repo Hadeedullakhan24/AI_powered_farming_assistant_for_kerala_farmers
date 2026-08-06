@@ -68,10 +68,12 @@ export const IRRIGATION_TYPES = [
 ] as const
 
 export const LANGUAGES = [
-  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: 'en', label: 'English',  flag: '🇬🇧' },
   { code: 'ml', label: 'മലയാളം', flag: '🇮🇳' },
-  { code: 'hi', label: 'हिन्दी', flag: '🇮🇳' },
-  { code: 'ta', label: 'தமிழ்', flag: '🇮🇳' },
+  { code: 'hi', label: 'हिन्दी',   flag: '🇮🇳' },
+  { code: 'ta', label: 'தமிழ்',   flag: '🇮🇳' },
+  { code: 'kn', label: 'ಕನ್ನಡ',   flag: '🇮🇳' },
+  { code: 'te', label: 'తెలుగు',  flag: '🇮🇳' },
 ] as const
 
 export const CROP_EMOJIS: Record<string, string> = {

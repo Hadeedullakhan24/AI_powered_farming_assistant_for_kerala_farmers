@@ -3,7 +3,11 @@ import { AnimatePresence } from 'framer-motion'
 import { Navbar } from './components/shared/Navbar'
 import { ChatWidget } from './components/shared/ChatWidget'
 import { QueryProvider } from './providers/QueryProvider'
+import { AuthProvider } from './context/AuthContext.tsx'
+import { AuthModal } from './components/AuthModal'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import { Home } from './pages/Home'
+import { LoginPage } from './pages/LoginPage'
 import { DiseaseDetection } from './pages/DiseaseDetection'
 import { TreatmentRecommendation } from './pages/TreatmentRecommendation'
 import { CropAdvisory } from './pages/CropAdvisory'
@@ -14,21 +18,76 @@ import { AIAssistant } from './pages/AIAssistant'
 function App() {
   return (
     <QueryProvider>
-      <BrowserRouter>
-        <Navbar />
-        <AnimatePresence mode="wait">
+      <AuthProvider>
+        <AuthModal />
+        <BrowserRouter>
           <Routes>
-            <Route path="/"          element={<Home />} />
-            <Route path="/disease"   element={<DiseaseDetection />} />
-            <Route path="/treatment" element={<TreatmentRecommendation />} />
-            <Route path="/crop"      element={<CropAdvisory />} />
-            <Route path="/weather"   element={<WeatherAdvisory />} />
-            <Route path="/market"    element={<MarketIntelligence />} />
-            <Route path="/assistant" element={<AIAssistant />} />
+            {/* Login page: full screen, no navbar */}
+            <Route path="/login" element={<LoginPage />} />
+
+            {/* All other pages: with Navbar */}
+            <Route path="/*" element={
+              <>
+                <Navbar />
+                <AnimatePresence mode="wait">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route
+                      path="/disease"
+                      element={
+                        <ProtectedRoute>
+                          <DiseaseDetection />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/treatment"
+                      element={
+                        <ProtectedRoute>
+                          <TreatmentRecommendation />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/crop"
+                      element={
+                        <ProtectedRoute>
+                          <CropAdvisory />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/weather"
+                      element={
+                        <ProtectedRoute>
+                          <WeatherAdvisory />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/market"
+                      element={
+                        <ProtectedRoute>
+                          <MarketIntelligence />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/assistant"
+                      element={
+                        <ProtectedRoute>
+                          <AIAssistant />
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Routes>
+                </AnimatePresence>
+                <ChatWidget />
+              </>
+            } />
           </Routes>
-        </AnimatePresence>
-        <ChatWidget />
-      </BrowserRouter>
+        </BrowserRouter>
+      </AuthProvider>
     </QueryProvider>
   )
 }

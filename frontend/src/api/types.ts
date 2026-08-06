@@ -212,8 +212,85 @@ export interface ChatMessage {
 export interface ChatRequest {
   message: string
   conversation_history?: ChatMessage[]
+  lang?: string
 }
 
 export interface ChatResponse {
   reply: string
 }
+
+// ─── Government Schemes & Financial Advisory ─────────────────────────────────
+export interface GovernmentRequest {
+  district: string
+  crop: string
+  land_area: number
+  land_ownership: string
+  farmer_category: string
+  annual_income: number
+  loan_required: string
+  current_loan?: string
+  language?: string
+}
+
+export interface SchemeCard {
+  scheme_id: string
+  scheme_name: string
+  description?: string
+  benefits: string
+  eligibility?: string
+  required_documents?: string[]
+  applicable_crops?: string[]
+  applicable_categories?: string[]
+  state?: string
+  district?: string | string[]
+  official_website: string
+  official_apply_link: string
+  helpline?: string
+  deadline?: string
+  priority?: string
+  estimated_financial_impact?: string
+  reason?: string
+}
+
+export interface LoanCard {
+  loan_id: string
+  loan_name: string
+  bank_organization: string
+  maximum_amount: string
+  interest_rate: string
+  eligibility?: string
+  required_documents?: string[]
+  official_website: string
+  official_apply_link: string
+  repayment_details?: string
+  repayment?: string
+  risk_level?: string
+}
+
+export interface AIExplanation {
+  why_best_scheme: string
+  why_best_loan: string
+  financial_benefit_breakdown: string
+  other_schemes_note: string
+}
+
+export interface GovernmentResponse {
+  profile_summary: {
+    district: string
+    crop: string
+    land_area: string
+    category: string
+    income: string
+  }
+  financial_score: number
+  financial_score_level: string
+  best_scheme: SchemeCard
+  eligible_schemes: SchemeCard[]
+  best_loan: LoanCard
+  loan_options: LoanCard[]
+  documents_required: string[]
+  government_alerts: string[]
+  next_steps: string[]
+  ai_explanation: AIExplanation
+}
+

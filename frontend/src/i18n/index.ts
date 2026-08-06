@@ -4,6 +4,8 @@ import en from '../locales/en.json'
 import ml from '../locales/ml.json'
 import hi from '../locales/hi.json'
 import ta from '../locales/ta.json'
+import kn from '../locales/kn.json'
+import te from '../locales/te.json'
 
 const savedLang = localStorage.getItem('hk_lang') ?? 'en'
 
@@ -15,6 +17,8 @@ i18n
       ml: { translation: ml },
       hi: { translation: hi },
       ta: { translation: ta },
+      kn: { translation: kn },
+      te: { translation: te },
     },
     lng: savedLang,
     fallbackLng: 'en',

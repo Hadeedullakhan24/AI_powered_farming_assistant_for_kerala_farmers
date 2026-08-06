@@ -5,7 +5,9 @@
   "scripts": {
     "dev:backend": ".venv\\Scripts\\uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000",
     "dev:frontend": "npm --prefix frontend run dev",
-    "dev": "concurrently -n BACKEND,FRONTEND -c blue,green --kill-others-on-fail \"npm run dev:backend\" \"npm run dev:frontend\""
+    "dev": "concurrently -n BACKEND,FRONTEND -c blue,green --kill-others-on-fail \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "kill-port": "FOR /F \"tokens=5\" %P IN ('netstat -ano ^| findstr :8000') DO taskkill /F /PID %P",
+    "restart": "npm run kill-port & npm run dev"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
