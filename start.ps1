@@ -17,6 +17,8 @@ $activate = Join-Path $root ".venv\Scripts\Activate.ps1"
 if (Test-Path $activate) {
     Write-Host "[1/3] Activating virtual environment..." -ForegroundColor Yellow
     & $activate
+    Write-Host "[1.5/3] Checking dependencies..." -ForegroundColor Yellow
+    & "$root\.venv\Scripts\python.exe" -m pip install -q -r "$root\backend\requirements.txt"
 } else {
     Write-Host "[ERROR] .venv not found. Please create it first:" -ForegroundColor Red
     Write-Host "        python -m venv .venv" -ForegroundColor Red

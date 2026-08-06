@@ -14,21 +14,94 @@ client = Groq(
 )
 
 
-def get_chat_response(message: str, conversation_history: list[dict] | None = None) -> dict:
-    """Return a conversational farming answer using the same provider as the other AI APIs.
+# ── Language-aware system prompt ────────────────────────────────────────────
+LANGUAGE_NAMES = {
+    "en": "English",
+    "ml": "Malayalam",
+    "hi": "Hindi",
+    "ta": "Tamil",
+    "kn": "Kannada",
+    "te": "Telugu",
+}
 
-    The frontend sends its recent messages with each request, so the backend keeps this
-    endpoint stateless and can safely serve multiple farmers at the same time.
+
+def build_system_prompt(base_prompt: str, lang: str) -> str:
+    """Inject a language instruction so the LLM generates directly in the target
+    language without a separate translation step."""
+    lang_name = LANGUAGE_NAMES.get(lang, "English")
+    if lang == "en":
+        return base_prompt  # No extra instruction needed for English
+    return (
+        f"{base_prompt}\n\n"
+        f"IMPORTANT: Respond ONLY in {lang_name}, written in {lang_name} "
+        f"script (not transliterated). Keep farming/agricultural terms "
+        f"clear and simple, as the user may have limited literacy."
+    )
+
+
+# ── Optional RAG Knowledge Base Singleton ──
+_rag_chatbot = None
+
+def _get_rag_chatbot():
+    global _rag_chatbot
+    if _rag_chatbot is None:
+        try:
+            from backend.models.chatbot.chatbot import FarmingChatbot
+            _rag_chatbot = FarmingChatbot()
+        except Exception as err:
+            print("[RAG] Could not initialize RAG chatbot:", err)
+            _rag_chatbot = False
+    return _rag_chatbot if _rag_chatbot is not False else None
+
+
+def get_chat_response(message: str, conversation_history: list[dict] | None = None, lang: str = "en") -> dict:
+    """Return an answer strictly based on the FAISS Knowledge Base documents.
+
+    Stateless endpoint: uses FAISS vector search to retrieve verified agricultural context
+    and translates/formats the answer in the farmer's requested language.
     """
     history = conversation_history or []
+    
+    # 1. RAG Retrieval from FAISS Knowledge Base
+    context_str = ""
+    sources = []
+    try:
+        rag = _get_rag_chatbot()
+        if rag:
+            docs = rag.retrieve_documents(message)
+            # Filter low similarity scores if needed
+            valid_docs = [(doc, score) for doc, score in docs if score >= 0.35]
+            if valid_docs:
+                context_str, sources = rag.build_context(valid_docs)
+    except Exception as e:
+        print("[RAG] Error during retrieval:", e)
+
+    # 2. If no Knowledge Base match found, return strict fallback message
+    if not context_str:
+        not_found_msg = {
+            "ml": "ക്ഷമിക്കണം, ഈ വിവരങ്ങൾ HexaKrishi കാർഷിക വിജ്ഞാന കോശത്തിൽ ലഭ്യമല്ല. വിള രോഗങ്ങൾ, കാലാവസ്ഥ, വിപണി വില എന്നിവയെക്കുറിച്ച് ചോദിക്കുക.",
+            "ta": "மன்னிக்கவும், இந்த தகவல் HexaKrishi விவசாய அறிவுத் தளத்தில் கிடைக்கவில்லை. பயிர் நோய்கள், வானிலை அல்லது சந்தை விலைகள் பற்றி கேட்கவும்.",
+            "hi": "क्षमा करें, यह जानकारी HexaKrishi कृषि ज्ञान कोष में उपलब्ध नहीं है। कृपया फसल रोग, मौसम या बाजार मूल्य के बारे में पूछें।",
+            "kn": "ಕ್ಷಮಿಸಿ, ಈ ಮಾಹಿತಿ HexaKrishi ಕೃಷಿ ಜ್ಞಾನ ಭಂಡಾರದಲ್ಲಿ ಲಭ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಬೆಳೆ ರೋಗಗಳು, ಹವಾಮಾನ ಅಥವಾ ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳ ಬಗ್ಗೆ ಕೇಳಿ.",
+            "te": "క్షమించండి, ఈ సమాచారం HexaKrishi వ్యవసాయ జ్ఞాన నిధిలో అందుబాటులో లేదు. దయచేసి పంట వ్యాధులు, వాతావరణం లేదా మార్కెట్ ధరల గురించి అడగండి.",
+            "en": "I could not find this information in the HexaKrishi agricultural knowledge base. Please ask about crop diseases, weather, market prices, or farming practices.",
+        }
+        return {"reply": not_found_msg.get(lang, not_found_msg["en"])}
+
+    # 3. Formulate strict RAG prompt grounded ONLY in Knowledge Base content
+    lang_name = LANGUAGE_NAMES.get(lang, "English")
+    base_prompt = (
+        "STRICT INSTRUCTION: You are HexaKrishi RAG Knowledge Assistant.\n"
+        "Answer the farmer's question ONLY using the verified Knowledge Base facts provided below.\n"
+        "Do NOT invent any facts or add outside general knowledge. "
+        f"Format and write your answer strictly in {lang_name} ({lang_name} script).\n\n"
+        f"VERIFIED KNOWLEDGE BASE CONTEXT:\n{context_str}"
+    )
+
     messages = [
         {
             "role": "system",
-            "content": (
-                "You are HexaKrishi, a practical agricultural assistant for Kerala farmers. "
-                "Give concise, actionable advice. State uncertainty for weather, market, "
-                "or pesticide questions and encourage following local label and safety guidance."
-            ),
+            "content": base_prompt,
         }
     ]
 

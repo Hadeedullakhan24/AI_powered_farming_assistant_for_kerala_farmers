@@ -91,6 +91,25 @@
   "pick_location": "வரைபடத்தில் இடத்தை தேர்ந்தெடுக்கவும்",
   "location_picked": "இடம் தேர்ந்தெடுக்கப்பட்டது",
   "no_location": "முதலில் ஒரு இடத்தை தேர்ந்தெடுக்கவும்",
+  "assistant_clear": "அழிக்கு",
+  "assistant_online": "AI உதவியாளர் · ஆன்லைன்",
+  "assistant_suggested": "ஆலோசனை கேள்விகள்:",
+  "assistant_disclaimer": "AI பதில்கள் ஆலோசனை தன்மையுடையதாகும். முக்கிய தீர்மானங்களுக்கு உள்ளார் விவசாய நிபுணர்களை சமாலிக்கவும்.",
+
+  "voice_listening": "கேட்கிறது...",
+  "voice_speak": "உரக்கமாக படிக்கும்",
+  "voice_stop": "நிறுத்து",
+  "voice_error": "மைக் கிடைக்கவில்லை. அனுமதி சரிபார்க்கவும்.",
+
+  "login_title": "மீண்டும் வருகை",
+  "login_subtitle": "உங்கள் HexaKrishi கணக்கில் உள்நுழைகை",
+  "login_email": "மின்னஞ்சல் முகவரி",
+  "login_password": "கடவுச்சொற்",
+  "login_name": "முழு பெயர்",
+  "login_sign_in": "உள்நுழைகை",
+  "login_sign_up": "பதிவு செய்கை",
+  "login_create": "கணக்கு உருவாக்கு",
+
   "footer_team": "குழு HexaKrishi · SIH 2024",
   "footer_links": "விரைவு இணைப்புகள்",
   "footer_language": "மொழி"

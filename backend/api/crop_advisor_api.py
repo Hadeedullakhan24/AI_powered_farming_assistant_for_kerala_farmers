@@ -1,17 +1,20 @@
-from fastapi import APIRouter, HTTPException
+from datetime import datetime
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Header
 
 from backend.schemas.crop_advisor_schema import CropAdvisorRequest
 from backend.services.weather_service import get_weather
 from backend.services.season_service import get_season
 from backend.services.groq_services import get_crop_advice
+from backend.database.mongo import get_crop_history_collection
+from backend.api.auth_api import get_current_user_from_token
 
 router = APIRouter()
 
 
 @router.post("/crop-advisor")
-def crop_advisor(request: CropAdvisorRequest):
+def crop_advisor(request: CropAdvisorRequest, authorization: Optional[str] = Header(None)):
     try:
-
         weather = get_weather(
             request.latitude,
             request.longitude
@@ -64,6 +67,25 @@ def crop_advisor(request: CropAdvisorRequest):
                     item["name"] = item.get("name") or item.get("crop", "Unsuitable Crop")
                     item["reason"] = item.get("reason", "Unfavorable soil or climate conditions.")
 
+        # Persist to MongoDB if authenticated
+        if authorization:
+            try:
+                user = get_current_user_from_token(authorization)
+                crop_col = get_crop_history_collection()
+                if crop_col is not None:
+                    doc = {
+                        "user_id": user.get("id"),
+                        "email": user.get("email"),
+                        "soil_type": request.soil_type,
+                        "irrigation": request.irrigation,
+                        "best_crop": result.get("best_crop"),
+                        "recommended_crops": result.get("recommended_crops"),
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                    crop_col.insert_one(doc)
+            except Exception as auth_err:
+                print(f"Notice: Non-blocking auth state in crop advisory ({auth_err})")
+
         return result
 
     except Exception as e:
@@ -71,3 +93,19 @@ def crop_advisor(request: CropAdvisorRequest):
             status_code=500,
             detail=str(e)
         )
+
+
+@router.get("/crop-history")
+def get_crop_history(authorization: Optional[str] = Header(None)):
+    user = get_current_user_from_token(authorization)
+    crop_col = get_crop_history_collection()
+
+    if crop_col is None:
+        return {"history": []}
+
+    records = list(crop_col.find({"email": user.get("email")}).sort("timestamp", -1).limit(50))
+    for r in records:
+        r["id"] = str(r["_id"])
+        r.pop("_id", None)
+
+    return {"history": records}

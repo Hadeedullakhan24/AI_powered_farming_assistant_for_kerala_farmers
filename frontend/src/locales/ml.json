@@ -100,6 +100,25 @@
   "location_picked": "സ്ഥലം തിരഞ്ഞെടുത്തു",
   "no_location": "ദയവായി ആദ്യം ഒരു സ്ഥലം തിരഞ്ഞെടുക്കുക",
 
+  "assistant_clear": "മായ്ക്കുക",
+  "assistant_online": "AI സഹായി · ഓൺലൈൻ",
+  "assistant_suggested": "നിർദ്ദേശിത ചോദ്യങ്ങൾ:",
+  "assistant_disclaimer": "AI ഉത്തരങ്ങൾ ഉപദേശ സ്വഭാവമുള്ളതാണ്. നിർണ്ണായക തീരുമാനങ്ങൾക്ക് പ്രാദേശിക കാർഷിക വിദഗ്ദ്ധരെ സമീപിക്കുക.",
+
+  "voice_listening": "ശ്രദ്ധിക്കുന്നു...",
+  "voice_speak": "ഉറക്കെ വായിക്കുക",
+  "voice_stop": "നിർത്തുക",
+  "voice_error": "മൈക്ക് ലഭ്യമല്ല. അനുമതി പരിശോധിക്കുക.",
+
+  "login_title": "തിരിച്ചു സ്വാഗതം",
+  "login_subtitle": "നിങ്ങളുടെ HexaKrishi അക്കൗണ്ടിൽ സൈൻ ഇൻ ചെയ്യുക",
+  "login_email": "ഇമെയിൽ വിലാസം",
+  "login_password": "പാസ്‌വേഡ്",
+  "login_name": "പൂർണ്ണ നാമം",
+  "login_sign_in": "സൈൻ ഇൻ",
+  "login_sign_up": "സൈൻ അപ്പ്",
+  "login_create": "അക്കൗണ്ട് ഉണ്ടാക്കുക",
+
   "footer_team": "ടീം HexaKrishi · SIH 2024",
   "footer_links": "ദ്രുത ലിങ്കുകൾ",
   "footer_language": "ഭാഷ"

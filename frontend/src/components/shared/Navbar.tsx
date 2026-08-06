@@ -8,6 +8,8 @@ import {
   Globe, Menu, X, ChevronDown, MessageCircle,
 } from 'lucide-react'
 import { LANGUAGES } from '../../lib/constants'
+import { useAuth } from '../../context/AuthContext.tsx'
+import { NavAuthSection } from '../NavAuthSection'
 
 const NAV_ITEMS = [
   { key: 'nav_home',      path: '/',          icon: Home },
@@ -23,8 +25,17 @@ const MOBILE_NAV_ITEMS = [...NAV_ITEMS.slice(0, 5), NAV_ITEMS[NAV_ITEMS.length -
 
 const LanguageSwitcher = () => {
   const [open, setOpen] = useState(false)
+  const { user, updateLanguage } = useAuth()
   const currentLang = i18n.language
   const current = LANGUAGES.find((l) => l.code === currentLang) ?? LANGUAGES[0]
+
+  const handleLanguageSelect = (langCode: string) => {
+    i18n.changeLanguage(langCode)
+    setOpen(false)
+    if (user) {
+      updateLanguage(langCode)
+    }
+  }
 
   return (
     <div style={{ position: 'relative' }}>
@@ -58,7 +69,7 @@ const LanguageSwitcher = () => {
               <button
                 key={lang.code}
                 id={`lang-${lang.code}`}
-                onClick={() => { i18n.changeLanguage(lang.code); setOpen(false) }}
+                onClick={() => handleLanguageSelect(lang.code)}
                 style={{
                   display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left',
                   background: lang.code === currentLang ? '#F0F7F0' : 'transparent',
@@ -141,7 +152,10 @@ export const Navbar = () => {
           })}
         </div>
 
-        <LanguageSwitcher />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <LanguageSwitcher />
+          <NavAuthSection />
+        </div>
       </nav>
 
       {/* ── Mobile Top Bar ── */}
@@ -192,6 +206,9 @@ export const Navbar = () => {
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text)' }}>
                   <X size={20} />
                 </button>
+              </div>
+              <div style={{ paddingBottom: 12, marginBottom: 12, borderBottom: '1px solid var(--color-border)' }}>
+                <NavAuthSection />
               </div>
               {NAV_ITEMS.map(({ key, path, icon: Icon }) => {
                 const active = location.pathname === path || (path !== '/' && location.pathname.startsWith(path))
