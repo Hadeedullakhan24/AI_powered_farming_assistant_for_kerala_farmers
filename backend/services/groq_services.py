@@ -55,88 +55,15 @@ def _get_rag_chatbot():
 
 
 def get_chat_response(message: str, conversation_history: list[dict] | None = None, lang: str = "en") -> dict:
-    """Return an answer strictly based on the FAISS Knowledge Base documents.
-
-    Stateless endpoint: uses FAISS vector search to retrieve verified agricultural context
-    and translates/formats the answer in the farmer's requested language.
-    """
-    history = conversation_history or []
-    
-    # 1. RAG Retrieval from FAISS Knowledge Base
-    context_str = ""
-    sources = []
-    try:
-        rag = _get_rag_chatbot()
-        if rag:
-            docs = rag.retrieve_documents(message)
-            # Filter low similarity scores if needed
-            valid_docs = [(doc, score) for doc, score in docs if score >= 0.35]
-            if valid_docs:
-                context_str, sources = rag.build_context(valid_docs)
-    except Exception as e:
-        print("[RAG] Error during retrieval:", e)
-
-    # 2. If no Knowledge Base match found, return strict fallback message
-    if not context_str:
-        not_found_msg = {
-            "ml": "ക്ഷമിക്കണം, ഈ വിവരങ്ങൾ HexaKrishi കാർഷിക വിജ്ഞാന കോശത്തിൽ ലഭ്യമല്ല. വിള രോഗങ്ങൾ, കാലാവസ്ഥ, വിപണി വില എന്നിവയെക്കുറിച്ച് ചോദിക്കുക.",
-            "ta": "மன்னிக்கவும், இந்த தகவல் HexaKrishi விவசாய அறிவுத் தளத்தில் கிடைக்கவில்லை. பயிர் நோய்கள், வானிலை அல்லது சந்தை விலைகள் பற்றி கேட்கவும்.",
-            "hi": "क्षमा करें, यह जानकारी HexaKrishi कृषि ज्ञान कोष में उपलब्ध नहीं है। कृपया फसल रोग, मौसम या बाजार मूल्य के बारे में पूछें।",
-            "kn": "ಕ್ಷಮಿಸಿ, ಈ ಮಾಹಿತಿ HexaKrishi ಕೃಷಿ ಜ್ಞಾನ ಭಂಡಾರದಲ್ಲಿ ಲಭ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಬೆಳೆ ರೋಗಗಳು, ಹವಾಮಾನ ಅಥವಾ ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳ ಬಗ್ಗೆ ಕೇಳಿ.",
-            "te": "క్షమించండి, ఈ సమాచారం HexaKrishi వ్యవసాయ జ్ఞాన నిధిలో అందుబాటులో లేదు. దయచేసి పంట వ్యాధులు, వాతావరణం లేదా మార్కెట్ ధరల గురించి అడగండి.",
-            "en": "I could not find this information in the HexaKrishi agricultural knowledge base. Please ask about crop diseases, weather, market prices, or farming practices.",
-        }
-        return {"reply": not_found_msg.get(lang, not_found_msg["en"])}
-
-    # 3. Formulate strict RAG prompt grounded ONLY in Knowledge Base content
-    lang_name = LANGUAGE_NAMES.get(lang, "English")
-    base_prompt = (
-        "STRICT INSTRUCTION: You are HexaKrishi RAG Knowledge Assistant.\n"
-        "Answer the farmer's question ONLY using the verified Knowledge Base facts provided below.\n"
-        "Do NOT invent any facts or add outside general knowledge. "
-        f"Format and write your answer strictly in {lang_name} ({lang_name} script).\n\n"
-        f"VERIFIED KNOWLEDGE BASE CONTEXT:\n{context_str}"
+    """Delegates chat processing to the unified HybridChatService."""
+    from backend.assistant.chat.service import get_chat_service
+    service = get_chat_service()
+    res = service.generate_response(
+        message=message,
+        conversation_history=conversation_history,
+        lang=lang
     )
-
-    messages = [
-        {
-            "role": "system",
-            "content": base_prompt,
-        }
-    ]
-
-    for item in history[-10:]:
-        if not isinstance(item, dict):
-            continue
-        role = item.get("role")
-        content = item.get("content")
-        if role in {"user", "assistant"} and isinstance(content, str) and content.strip():
-            messages.append({"role": role, "content": content.strip()})
-
-    # The latest question is authoritative; do not rely on callers placing it in history.
-    if not messages or messages[-1].get("role") != "user" or messages[-1].get("content") != message.strip():
-        messages.append({"role": "user", "content": message.strip()})
-
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            temperature=0.35,
-            max_tokens=700,
-        )
-        reply = (response.choices[0].message.content or "").strip()
-        if reply:
-            return {"reply": reply}
-        raise RuntimeError("The AI provider returned an empty reply.")
-    except Exception as exc:
-        print("Groq Chat Error:", exc)
-        return {
-            "reply": (
-                "I could not reach the AI service right now. Please try again shortly. "
-                "For immediate guidance, you can use the weather, crop advisory, disease, "
-                "and market tools in this app."
-            )
-        }
+    return {"reply": res["reply"]}
 
 
 def _safe_parse_json(result_text: str) -> dict:
@@ -190,39 +117,15 @@ Return ONLY valid JSON.
     except Exception as e:
         print("Groq Treatment Error:", e)
         return {
-            "crop": crop.title(),
-            "disease": disease.title(),
-            "overview": f"Management and treatment guidance for {disease} affecting {crop} in Kerala.",
-            "symptoms": [
-                f"Discoloration, spotting, or lesions on {crop} leaves/stems.",
-                "Wilting, drooping, or reduced crop vigor.",
-                "Stunted growth and lower yield potential."
-            ],
-            "chemical_treatment": [
-                "Copper Oxychloride 50 WP (2.5g / litre water)",
-                "Mancozeb 75 WP (2g / litre water)",
-                "Systemic fungicide spray on affected areas"
-            ],
-            "organic_treatment": [
-                "Neem oil spray (5ml / litre water + liquid soap emulsifier)",
-                "Pseudomonas fluorescens spray (10g / litre water)",
-                "Trichoderma viride soil application near root zone"
-            ],
-            "dosage": [
-                "Spray 250-300 litres of solution per acre",
-                "Repeat application after 12-14 days if symptoms persist",
-                "Apply during cool early morning or late evening hours"
-            ],
-            "prevention": [
-                "Maintain good field sanitation and drainage",
-                "Use certified disease-resistant seeds/varieties",
-                "Rotate with non-host crops each season"
-            ],
-            "precautions": [
-                "Wear protective mask and gloves while spraying",
-                "Avoid spraying during high winds or heavy rain",
-                "Strictly observe 14-day pre-harvest waiting interval"
-            ]
+            "crop": crop,
+            "disease": disease,
+            "overview": f"Treatment guidance for {disease} in {crop}.",
+            "symptoms": ["Leaf damage", "Reduced growth"],
+            "chemical_treatment": ["Fungicide spray"],
+            "organic_treatment": ["Neem oil spray"],
+            "dosage": ["Follow package instructions"],
+            "prevention": ["Crop rotation", "Good drainage"],
+            "precautions": ["Wear protective gear"]
         }
 
 

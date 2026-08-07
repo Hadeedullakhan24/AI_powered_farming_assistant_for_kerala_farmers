@@ -9,9 +9,37 @@ def generate_government_advisory(
     eligible_loans: list,
     score_data: dict
 ) -> dict:
-    """Invokes Groq AI to analyze eligible schemes and loans and return structured financial advisory."""
+    """Invokes Groq AI to perform deep financial analysis of eligible schemes and loans and return dynamic AI advisory."""
 
-    target_lang = profile.language or "English"
+    # Compact representations of pre-filtered candidates for AI selection
+    schemes_summary = [
+        {
+            "scheme_id": s.get("scheme_id"),
+            "scheme_name": s.get("scheme_name"),
+            "applicable_crops": s.get("applicable_crops"),
+            "benefits": s.get("benefits"),
+            "eligibility": s.get("eligibility"),
+            "state": s.get("state"),
+            "district": s.get("district"),
+            "official_website": s.get("official_website"),
+            "official_apply_link": s.get("official_apply_link")
+        }
+        for s in eligible_schemes
+    ]
+
+    loans_summary = [
+        {
+            "loan_id": l.get("loan_id"),
+            "loan_name": l.get("loan_name"),
+            "bank_organization": l.get("bank_organization"),
+            "maximum_amount": l.get("maximum_amount"),
+            "interest_rate": l.get("interest_rate"),
+            "repayment_details": l.get("repayment_details"),
+            "official_website": l.get("official_website"),
+            "official_apply_link": l.get("official_apply_link")
+        }
+        for l in eligible_loans
+    ]
 
     prompt = f"""
 You are a Senior Agricultural Financial Advisor and Government Scheme Specialist for Kerala Farmers.
@@ -24,23 +52,24 @@ Farmer Profile:
 - Farmer Category: {profile.farmer_category}
 - Annual Income: ₹{profile.annual_income:,.2f}
 - Loan Required: {profile.loan_required}
-- Current Loan: {profile.current_loan or 'None'}
-- Calculated Baseline Financial Score: {score_data['score']}/100 ({score_data['level']})
-- Output Language Request: {target_lang}
+- Current Ongoing Loan: {profile.current_loan or 'None'}
+- Baseline Financial Score: {score_data['score']}/100 ({score_data['level']})
 
-Eligible Government Schemes (Pre-filtered):
-{json.dumps(eligible_schemes, indent=2)}
+Eligible Government Schemes (Ranked by relevance):
+{json.dumps(schemes_summary, indent=2)}
 
-Eligible Loan Options (Pre-filtered):
-{json.dumps(eligible_loans, indent=2)}
+Eligible Loan Options:
+{json.dumps(loans_summary, indent=2)}
 
-Task:
-Analyze the farmer profile and select the SINGLE BEST government scheme and SINGLE BEST loan option from the provided eligible lists. Generate an AI decision support advisory.
+TASK:
+1. Select the SINGLE BEST government scheme for this specific farmer profile.
+   CRITICAL BIAS PREVENTION: Prioritize crop-specific Kerala & Central schemes tailored to {profile.crop} (e.g. Keragramam for Coconut, Paddy Royalty for Paddy, Rubber Board for Rubber, Spices Board for Spices) over generic baseline schemes like PM-KISAN, unless no crop-specific scheme exists.
+2. Select the SINGLE BEST loan option suited to their financial status and land holding ({profile.land_area} Acres).
+3. Generate dynamic, highly specific recommendations, document checklists, urgent local farming alerts, and step-by-step application guidance.
 
-IMPORTANT RULES:
-1. Do NOT invent fake URLs or external links. Copy the exact "official_website" and "official_apply_link" strings from the provided JSON.
-2. Produce all explanations, reasons, benefits, alerts, next_steps, and summaries in {target_lang}. Keep scheme names in their standard recognizable form.
-3. Return ONLY valid JSON matching the exact schema below.
+IMPORTANT:
+- Use exact scheme_id and loan_id from the lists provided.
+- Do NOT output template placeholders. Generate specific, genuine AI advice.
 
 JSON Output Schema:
 {{
@@ -55,12 +84,12 @@ JSON Output Schema:
   "financial_score_level": "{score_data['level']}",
 
   "best_scheme": {{
-    "scheme_id": "",
+    "scheme_id": "EXACT_SCHEME_ID",
     "scheme_name": "",
-    "reason": "",
+    "reason": "Detailed reason why this scheme specifically benefits a {profile.crop} farmer in {profile.district}.",
     "benefits": "",
     "priority": "High",
-    "estimated_financial_impact": "",
+    "estimated_financial_impact": "Specific financial subsidy estimate",
     "official_website": "",
     "official_apply_link": ""
   }},
@@ -68,7 +97,7 @@ JSON Output Schema:
   "eligible_schemes": {json.dumps(eligible_schemes)},
 
   "best_loan": {{
-    "loan_id": "",
+    "loan_id": "EXACT_LOAN_ID",
     "loan_name": "",
     "bank_organization": "",
     "maximum_amount": "",
@@ -82,40 +111,42 @@ JSON Output Schema:
   "loan_options": {json.dumps(eligible_loans)},
 
   "documents_required": [
-    "Aadhaar Card",
-    "Bank Account Passbook",
-    "Land Possession Certificate / Revenue Receipt",
-    "AIMS Kerala Registration ID"
+    "Specific document 1 for selected scheme",
+    "Specific document 2",
+    "AIMS Karshak ID / Land Revenue Receipt",
+    "Aadhaar Card & Bank Passbook"
   ],
 
   "government_alerts": [
-    "Alert 1 regarding subsidy or deadline",
-    "Alert 2 regarding loan subvention"
+    "Specific alert regarding upcoming subsidy application window or Krishi Bhavan verification in {profile.district}",
+    "Specific alert regarding interest subvention or insurance deadline for {profile.crop}"
   ],
 
   "next_steps": [
-    "Step 1: Gather required documents",
-    "Step 2: Submit online application via official portal"
+    "Step 1: Specific action point",
+    "Step 2: Specific action point",
+    "Step 3: Submit application to Krishi Bhavan or official online portal"
   ],
 
   "ai_explanation": {{
-    "why_best_scheme": "Clear 2-sentence explanation why this is the highest impact scheme for this farmer.",
-    "why_best_loan": "Clear 2-sentence explanation of interest subvention and suitability.",
-    "financial_benefit_breakdown": "Estimated total financial benefit from subsidies and concessional loan.",
-    "other_schemes_note": "Brief note on why other schemes offer secondary or supplementary support."
+    "why_best_scheme": "Comprehensive AI explanation of why this scheme provides the highest economic impact for {profile.crop} in {profile.district}.",
+    "why_best_loan": "Clear AI explanation of why this loan structure suits their land holding and income level.",
+    "financial_benefit_breakdown": "Specific financial subsidy or interest subvention savings breakdown.",
+    "other_schemes_note": "Brief guidance on secondary eligible schemes."
   }}
 }}
 
-Return ONLY valid JSON. No markdown wrappers.
+Return ONLY valid JSON.
 """
 
+    parsed = None
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {
                     "role": "system",
-                    "content": f"You are India's top agricultural financial advisor. Provide structured government scheme and loan advisory in {target_lang}. Return valid JSON only."
+                    "content": "You are India's leading AI agricultural financial analyst. Generate structured, highly personalized scheme and loan advisory in clear JSON format."
                 },
                 {
                     "role": "user",
@@ -129,37 +160,15 @@ Return ONLY valid JSON. No markdown wrappers.
         result_text = response.choices[0].message.content.strip()
         parsed = _safe_parse_json(result_text)
 
-        # Preserve exact raw lists if AI returned incomplete lists
-        if "eligible_schemes" not in parsed or not isinstance(parsed["eligible_schemes"], list):
-            parsed["eligible_schemes"] = eligible_schemes
-        if "loan_options" not in parsed or not isinstance(parsed["loan_options"], list):
-            parsed["loan_options"] = eligible_loans
-
-        return parsed
-
     except Exception as e:
-        print("Groq Government Advisory Error:", e)
+        print("Groq Government Advisory AI Error:", e)
 
-        # Robust Fallback
-        top_scheme = eligible_schemes[0] if eligible_schemes else {
-            "scheme_id": "SCH001",
-            "scheme_name": "Pradhan Mantri Kisan Samman Nidhi (PM-KISAN)",
-            "benefits": "Rs 6,000 direct income support per year",
-            "official_website": "https://pmkisan.gov.in",
-            "official_apply_link": "https://pmkisan.gov.in/RegistrationFormNew.aspx"
-        }
+    # If AI failed or returned empty JSON, construct dynamic baseline using top eligible items
+    if not parsed or not isinstance(parsed, dict):
+        top_s = eligible_schemes[0] if eligible_schemes else {}
+        top_l = eligible_loans[0] if eligible_loans else {}
 
-        top_loan = eligible_loans[0] if eligible_loans else {
-            "loan_id": "LOAN001",
-            "loan_name": "Kisan Credit Card (KCC) Short-Term Crop Loan",
-            "bank_organization": "Nationalized & Regional Rural Banks",
-            "maximum_amount": "Up to Rs 3,00,000",
-            "interest_rate": "4% Effective Interest Rate",
-            "official_website": "https://kisan.gov.in",
-            "official_apply_link": "https://pmkisan.gov.in/KCC.aspx"
-        }
-
-        return {
+        parsed = {
             "profile_summary": {
                 "district": profile.district,
                 "crop": profile.crop,
@@ -170,50 +179,89 @@ Return ONLY valid JSON. No markdown wrappers.
             "financial_score": score_data["score"],
             "financial_score_level": score_data["level"],
             "best_scheme": {
-                "scheme_id": top_scheme.get("scheme_id", "SCH001"),
-                "scheme_name": top_scheme.get("scheme_name", "PM-KISAN"),
+                "scheme_id": top_s.get("scheme_id", "SCH001"),
+                "scheme_name": top_s.get("scheme_name", "PM-KISAN"),
                 "reason": f"Highest direct financial support suitable for {profile.crop} farming in {profile.district}.",
-                "benefits": top_scheme.get("benefits", "Direct input support"),
+                "benefits": top_s.get("benefits", "Direct input support"),
                 "priority": "High",
                 "estimated_financial_impact": "Direct Subsidy & Input Grant",
-                "official_website": top_scheme.get("official_website", "https://pmkisan.gov.in"),
-                "official_apply_link": top_scheme.get("official_apply_link", "https://pmkisan.gov.in")
+                "official_website": top_s.get("official_website", "https://pmkisan.gov.in"),
+                "official_apply_link": top_s.get("official_apply_link", "https://pmkisan.gov.in")
             },
             "eligible_schemes": eligible_schemes,
             "best_loan": {
-                "loan_id": top_loan.get("loan_id", "LOAN001"),
-                "loan_name": top_loan.get("loan_name", "Kisan Credit Card (KCC)"),
-                "bank_organization": top_loan.get("bank_organization", "Commercial & Co-operative Banks"),
-                "maximum_amount": top_loan.get("maximum_amount", "Up to Rs 3 Lakhs"),
-                "interest_rate": top_loan.get("interest_rate", "4% per annum"),
-                "repayment": top_loan.get("repayment_details", "Post-harvest 12 months"),
+                "loan_id": top_l.get("loan_id", "LOAN001"),
+                "loan_name": top_l.get("loan_name", "Kisan Credit Card (KCC)"),
+                "bank_organization": top_l.get("bank_organization", "Commercial & Co-operative Banks"),
+                "maximum_amount": top_l.get("maximum_amount", "Up to Rs 3 Lakhs"),
+                "interest_rate": top_l.get("interest_rate", "4% per annum"),
+                "repayment": top_l.get("repayment_details", "Post-harvest 12 months"),
                 "risk_level": "Low",
-                "official_website": top_loan.get("official_website", "https://kisan.gov.in"),
-                "official_apply_link": top_loan.get("official_apply_link", "https://kisan.gov.in")
+                "official_website": top_l.get("official_website", "https://kisan.gov.in"),
+                "official_apply_link": top_l.get("official_apply_link", "https://kisan.gov.in")
             },
             "loan_options": eligible_loans,
             "documents_required": [
-                "Aadhaar Card",
+                "Aadhaar Card & Active Mobile Number",
                 "Bank Account Passbook",
                 "Land Revenue Receipt / Possession Certificate",
-                "AIMS Kerala Registration ID",
-                "Passport Size Photographs"
+                "AIMS Kerala Registration ID"
             ],
             "government_alerts": [
-                f"Active subsidy schemes open for {profile.crop} growers in {profile.district}.",
-                "KCC 3% interest subvention active for prompt repayments.",
-                "Ensure your AIMS portal profile is updated before Krishi Bhavan verification."
+                f"Active subsidy options available for {profile.crop} growers in {profile.district}.",
+                "Check AIMS Kerala portal for Krishi Bhavan subsidy verification.",
+                "Ensure Aadhaar is linked to bank account for DBT subsidy credit."
             ],
             "next_steps": [
-                "Step 1: Check required documents (Aadhaar, Land Receipt, Bank Passbook).",
-                "Step 2: Visit the official government application link provided below.",
-                "Step 3: Submit application to Krishi Bhavan or portal online.",
-                "Step 4: Track application status with your registration reference number."
+                "Step 1: Organize required land tax receipt and Aadhaar documents.",
+                "Step 2: Access official online portal via application link below.",
+                "Step 3: Submit application to local Krishi Bhavan office for verification."
             ],
             "ai_explanation": {
-                "why_best_scheme": f"{top_scheme.get('scheme_name')} matches your category ({profile.farmer_category}) and land area ({profile.land_area} Acres).",
-                "why_best_loan": f"{top_loan.get('loan_name')} offers the lowest effective interest rate with government interest subvention.",
-                "financial_benefit_breakdown": "Provides direct financial support and low-interest credit for seasonal farming expenses.",
-                "other_schemes_note": "Other eligible schemes are secondary subsidies for equipment and crop insurance."
+                "why_best_scheme": f"{top_s.get('scheme_name')} matches your category ({profile.farmer_category}) and land area ({profile.land_area} Acres).",
+                "why_best_loan": f"{top_l.get('loan_name')} offers low-interest credit suited for seasonal agricultural requirements.",
+                "financial_benefit_breakdown": "Delivers direct financial subsidy and concessional credit support.",
+                "other_schemes_note": "Additional eligible schemes offer equipment subsidies and crop insurance coverage."
             }
         }
+
+    # ── Post-processing: Enforce 100% exact link integrity from DB ─────────────
+    # Always keep full eligible lists intact
+    parsed["eligible_schemes"] = eligible_schemes
+    parsed["loan_options"] = eligible_loans
+
+    # Map best_scheme to exact verified candidate
+    best_s_id = parsed.get("best_scheme", {}).get("scheme_id")
+    matched_scheme = next((s for s in eligible_schemes if s.get("scheme_id") == best_s_id), None)
+    if not matched_scheme and eligible_schemes:
+        matched_scheme = eligible_schemes[0]
+
+    if matched_scheme:
+        b_scheme = parsed.get("best_scheme", {})
+        b_scheme["scheme_id"] = matched_scheme.get("scheme_id")
+        b_scheme["scheme_name"] = matched_scheme.get("scheme_name")
+        b_scheme["official_website"] = matched_scheme.get("official_website")
+        b_scheme["official_apply_link"] = matched_scheme.get("official_apply_link")
+        if not b_scheme.get("benefits"):
+            b_scheme["benefits"] = matched_scheme.get("benefits")
+        parsed["best_scheme"] = b_scheme
+
+    # Map best_loan to exact verified candidate
+    best_l_id = parsed.get("best_loan", {}).get("loan_id")
+    matched_loan = next((l for l in eligible_loans if l.get("loan_id") == best_l_id), None)
+    if not matched_loan and eligible_loans:
+        matched_loan = eligible_loans[0]
+
+    if matched_loan:
+        b_loan = parsed.get("best_loan", {})
+        b_loan["loan_id"] = matched_loan.get("loan_id")
+        b_loan["loan_name"] = matched_loan.get("loan_name")
+        b_loan["bank_organization"] = matched_loan.get("bank_organization")
+        b_loan["maximum_amount"] = matched_loan.get("maximum_amount")
+        b_loan["interest_rate"] = matched_loan.get("interest_rate")
+        b_loan["repayment"] = matched_loan.get("repayment_details", b_loan.get("repayment", ""))
+        b_loan["official_website"] = matched_loan.get("official_website")
+        b_loan["official_apply_link"] = matched_loan.get("official_apply_link")
+        parsed["best_loan"] = b_loan
+
+    return parsed

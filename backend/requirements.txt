@@ -34,3 +34,6 @@ bcrypt>=4.0.1
 # NOTE: torch and transformers already listed above — these are the extra deps
 faster-whisper>=1.0.0
 soundfile>=0.12.1
+
+# Government Scheme Refresh Scheduler
+apscheduler>=3.10.0

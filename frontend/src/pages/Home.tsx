@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
   Leaf, FlaskConical, Sprout, CloudSun, TrendingUp, ArrowRight,
-  ShieldCheck, MapPin, Zap, CheckCircle2, Sparkles, Bot
+  ShieldCheck, MapPin, Zap, CheckCircle2, Sparkles, Bot, Landmark
 } from 'lucide-react'
 import { PageTransition } from '../components/shared/PageTransition'
 
@@ -93,6 +93,17 @@ const MODULES = [
     iconColor: '#283593',
     badge: 'Chat AI'
   },
+  {
+    key: 'nav_government',
+    path: '/government',
+    icon: Landmark,
+    title: 'Gov. Schemes & Finance',
+    tagline: 'AI Financial Advisory',
+    desc: 'Personalized government scheme matching, loan advisory & financial strength scoring for Kerala farmers.',
+    color: '#E8F5E9',
+    iconColor: '#1B5E20',
+    badge: 'Schemes AI'
+  },
 ]
 
 const QUICK_BADGES = [
@@ -102,10 +113,11 @@ const QUICK_BADGES = [
   { label: '⛅ Weather Alerts', path: '/weather' },
   { label: '📈 Live Market Prices', path: '/market' },
   { label: '🤖 AI Chat Assistant', path: '/assistant' },
+  { label: '🏛️ Gov. Schemes', path: '/government' },
 ]
 
 const STATS = [
-  { label: 'AI Farming Modules', value: 6 },
+  { label: 'AI Farming Modules', value: 7 },
   { label: 'Kerala Districts Covered', value: 14 },
   { label: 'Supported Crops', value: 12 },
   { label: 'Free for Farmers', value: 100 },

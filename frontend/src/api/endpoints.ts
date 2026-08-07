@@ -70,3 +70,14 @@ export const sendChatMessage = async (
   const res = await apiClient.post<ChatResponse>('/api/assistant/chat', body)
   return res.data
 }
+
+// ─── Module 7: Government Schemes & Financial Advisory ────────────────────────
+export const getGovernmentAdvisory = async (
+  body: import('./types').GovernmentRequest
+): Promise<import('./types').GovernmentResponse> => {
+  const res = await apiClient.post<import('./types').GovernmentResponse>(
+    '/api/government/advisory',
+    body
+  )
+  return res.data
+}

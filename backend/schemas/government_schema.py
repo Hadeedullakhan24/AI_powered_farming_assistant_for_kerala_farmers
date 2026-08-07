@@ -1,17 +1,36 @@
+"""
+government_schema.py (enhanced)
+──────────────────────────────
+Pydantic schemas for the Government Schemes & Financial Advisory module.
+Adds DataFreshness and data_freshness field to GovernmentAdvisoryResponse.
+"""
+
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 
 class FarmerProfileRequest(BaseModel):
     district: str = Field(..., example="Palakkad")
     crop: str = Field(..., example="Paddy")
     land_area: float = Field(..., example=2.5, description="Land area in acres")
-    land_ownership: str = Field(..., example="Owned", description="Owned, Leased, Tenant, Sharecropper")
-    farmer_category: str = Field(..., example="Marginal/Small (<5 acres)", description="Marginal/Small, Medium, Large, Women Farmer, SC/ST, General")
+    land_ownership: str = Field(
+        ..., example="Owned",
+        description="Owned | Leased | Tenant | Sharecropper"
+    )
+    farmer_category: str = Field(
+        ..., example="Marginal/Small (<5 acres)",
+        description="Marginal/Small | Medium | Large | Women Farmer | SC/ST | General"
+    )
     annual_income: float = Field(..., example=120000.0, description="Annual income in INR")
     loan_required: str = Field("Yes", example="Yes", description="Yes or No")
-    current_loan: Optional[str] = Field("None", example="None", description="Details of current ongoing loan if any")
-    language: str = Field("English", example="English", description="English, Malayalam, Hindi, Tamil, Kannada, Telugu")
+    current_loan: Optional[str] = Field(
+        "None", example="None",
+        description="Details of current ongoing loan if any"
+    )
+    language: Optional[str] = Field(
+        "English", example="English",
+        description="Optional language for advisory output"
+    )
 
 
 class SchemeItem(BaseModel):
@@ -31,6 +50,10 @@ class SchemeItem(BaseModel):
     deadline: str
     priority: Optional[str] = "High"
     estimated_financial_impact: Optional[str] = "Subsidies & Direct Financial Assistance"
+    # Freshness metadata
+    source_url: Optional[str] = None
+    last_verified: Optional[str] = None
+    freshness_ok: Optional[bool] = None
 
 
 class LoanItem(BaseModel):
@@ -45,6 +68,10 @@ class LoanItem(BaseModel):
     official_apply_link: str
     repayment_details: str
     risk_level: Optional[str] = "Low"
+    # Freshness metadata
+    source_url: Optional[str] = None
+    last_verified: Optional[str] = None
+    freshness_ok: Optional[bool] = None
 
 
 class AIExplanation(BaseModel):
@@ -52,6 +79,17 @@ class AIExplanation(BaseModel):
     why_best_loan: str
     financial_benefit_breakdown: str
     other_schemes_note: str
+
+
+class DataFreshnessSummary(BaseModel):
+    """Per-source freshness record returned by /freshness endpoint."""
+    scheme_id: Optional[str] = None
+    loan_id: Optional[str] = None
+    scheme_name: Optional[str] = None
+    loan_name: Optional[str] = None
+    source_url: str
+    last_verified: str
+    freshness_ok: Optional[bool] = None
 
 
 class GovernmentAdvisoryResponse(BaseModel):
@@ -66,3 +104,5 @@ class GovernmentAdvisoryResponse(BaseModel):
     government_alerts: List[str]
     next_steps: List[str]
     ai_explanation: Dict[str, Any]
+    # New: data freshness summary (populated from fetcher services)
+    data_freshness: Optional[Dict[str, Any]] = None
