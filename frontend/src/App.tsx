@@ -14,6 +14,7 @@ import { CropAdvisory } from './pages/CropAdvisory'
 import { WeatherAdvisory } from './pages/WeatherAdvisory'
 import { MarketIntelligence } from './pages/MarketIntelligence'
 import { AIAssistant } from './pages/AIAssistant'
+import { GovernmentAdvisory } from './pages/GovernmentAdvisory'
 
 function App() {
   return (
@@ -77,6 +78,14 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <AIAssistant />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/government"
+                      element={
+                        <ProtectedRoute>
+                          <GovernmentAdvisory />
                         </ProtectedRoute>
                       }
                     />

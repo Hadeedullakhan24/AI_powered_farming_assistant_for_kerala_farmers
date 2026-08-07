@@ -292,5 +292,13 @@ export interface GovernmentResponse {
   government_alerts: string[]
   next_steps: string[]
   ai_explanation: AIExplanation
+  // Freshness summary attached by backend fetcher services
+  data_freshness?: {
+    oldest_verified?: string
+    newest_verified?: string
+    sources_ok?: number
+    sources_stale?: number
+    note?: string
+  }
 }
 

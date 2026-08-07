@@ -5,23 +5,24 @@ import { useTranslation } from 'react-i18next'
 import i18n from '../../i18n'
 import {
   Home, Leaf, FlaskConical, Sprout, CloudSun, TrendingUp,
-  Globe, Menu, X, ChevronDown, MessageCircle,
+  Globe, Menu, X, ChevronDown, MessageCircle, Landmark,
 } from 'lucide-react'
 import { LANGUAGES } from '../../lib/constants'
 import { useAuth } from '../../context/AuthContext.tsx'
 import { NavAuthSection } from '../NavAuthSection'
 
 const NAV_ITEMS = [
-  { key: 'nav_home',      path: '/',          icon: Home },
-  { key: 'nav_disease',   path: '/disease',   icon: Leaf },
-  { key: 'nav_treatment', path: '/treatment', icon: FlaskConical },
-  { key: 'nav_crop',      path: '/crop',      icon: Sprout },
-  { key: 'nav_weather',   path: '/weather',   icon: CloudSun },
-  { key: 'nav_market',    path: '/market',    icon: TrendingUp },
-  { key: 'nav_assistant', path: '/assistant', icon: MessageCircle },
+  { key: 'nav_home',       path: '/',           icon: Home },
+  { key: 'nav_disease',    path: '/disease',    icon: Leaf },
+  { key: 'nav_treatment',  path: '/treatment',  icon: FlaskConical },
+  { key: 'nav_crop',       path: '/crop',       icon: Sprout },
+  { key: 'nav_weather',    path: '/weather',    icon: CloudSun },
+  { key: 'nav_market',     path: '/market',     icon: TrendingUp },
+  { key: 'nav_assistant',  path: '/assistant',  icon: MessageCircle },
+  { key: 'nav_government', path: '/government', icon: Landmark },
 ]
 
-const MOBILE_NAV_ITEMS = [...NAV_ITEMS.slice(0, 5), NAV_ITEMS[NAV_ITEMS.length - 1]]
+const MOBILE_NAV_ITEMS = [...NAV_ITEMS.slice(0, 4), NAV_ITEMS[6], NAV_ITEMS[7]]
 
 const LanguageSwitcher = () => {
   const [open, setOpen] = useState(false)
