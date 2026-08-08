@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Header
 
-from backend.schemas.crop_advisor_schema import CropAdvisorRequest
+from backend.schemas.crop_advisor_schema import CropAdvisorRequest, CropAdvisoryResponse
 from backend.services.weather_service import get_weather
 from backend.services.season_service import get_season
 from backend.services.groq_services import get_crop_advice
@@ -12,13 +12,15 @@ from backend.api.auth_api import get_current_user_from_token
 router = APIRouter()
 
 
-@router.post("/crop-advisor")
+@router.post("/crop-advisor", response_model=CropAdvisoryResponse)
 def crop_advisor(request: CropAdvisorRequest, authorization: Optional[str] = Header(None)):
     try:
         weather = get_weather(
             request.latitude,
             request.longitude
         )
+        weather["latitude"] = request.latitude
+        weather["longitude"] = request.longitude
 
         season = get_season()
 
@@ -29,43 +31,87 @@ def crop_advisor(request: CropAdvisorRequest, authorization: Optional[str] = Hea
             season=season
         )
 
-        # Normalize best_crop
-        if "best_crop" in result and isinstance(result["best_crop"], dict):
-            bc = result["best_crop"]
-            bc["name"] = bc.get("name") or bc.get("crop", "Top Recommended Crop")
-            bc["confidence"] = int(bc.get("confidence", 90))
-            bc["reason"] = bc.get("reason", "Favorable soil and weather conditions.")
-            
-        # Normalize recommended_crops
-        if "recommended_crops" in result and isinstance(result["recommended_crops"], list):
-            for i, item in enumerate(result["recommended_crops"]):
-                if isinstance(item, dict):
-                    item["name"] = item.get("name") or item.get("crop", f"Crop {i+1}")
-                    item["rank"] = item.get("rank") or item.get("recommendation_rank", i + 1)
-                    item["confidence"] = int(item.get("confidence", 85))
-                    item["suitability_score"] = int(item.get("suitability_score", item["confidence"]))
-                    
-                    # Ensure list types
-                    why = item.get("why_recommended", [])
-                    item["why_recommended"] = why if isinstance(why, list) else [str(why)]
-                    
-                    risks = item.get("possible_risks", [])
-                    item["possible_risks"] = risks if isinstance(risks, list) else [str(risks)]
+        if not isinstance(result, dict):
+            result = {}
 
-                    # Default strings
-                    item["best_sowing_time"] = item.get("best_sowing_time", "Optimal Season")
-                    item["crop_duration"] = item.get("crop_duration", "Standard")
-                    item["water_requirement"] = item.get("water_requirement", "Moderate")
-                    item["expected_yield"] = item.get("expected_yield", "High")
-                    item["market_demand"] = item.get("market_demand", "High")
-                    item["profitability"] = item.get("profitability", "High")
+        result["location"] = result.get("location") or weather.get("location", "Kerala, India")
+        result["summary"] = result.get("summary") or "Comprehensive crop advisory based on local soil and weather conditions."
+
+        # Normalize best_crop
+        bc = result.get("best_crop")
+        if not isinstance(bc, dict):
+            bc = {}
+        crop_name = bc.get("crop") or bc.get("name") or "Paddy (Rice)"
+        bc["crop"] = crop_name
+        bc["name"] = crop_name
+        bc["confidence"] = int(bc.get("confidence", 90))
+        bc["reason"] = bc.get("reason", "Favorable soil and weather conditions.")
+        if "varieties" not in bc or not isinstance(bc["varieties"], list):
+            bc["varieties"] = []
+        result["best_crop"] = bc
+
+        # Normalize recommended_crops
+        rc_list = result.get("recommended_crops")
+        if not isinstance(rc_list, list) or len(rc_list) == 0:
+            rc_list = []
+
+        normalized_rc = []
+        for i, item in enumerate(rc_list):
+            if not isinstance(item, dict):
+                continue
+            c_name = item.get("crop") or item.get("name") or f"Recommended Crop {i+1}"
+            rank_val = int(item.get("recommendation_rank") or item.get("rank") or (i + 1))
+            conf = int(item.get("confidence", 85))
+            score = int(item.get("suitability_score", conf))
+
+            why = item.get("why_recommended", [])
+            why = why if isinstance(why, list) else [str(why)]
+
+            risks = item.get("possible_risks", [])
+            risks = risks if isinstance(risks, list) else [str(risks)]
+
+            vars_list = item.get("varieties", [])
+            vars_list = vars_list if isinstance(vars_list, list) else []
+
+            normalized_rc.append({
+                "recommendation_rank": rank_val,
+                "rank": rank_val,
+                "crop": c_name,
+                "name": c_name,
+                "confidence": conf,
+                "suitability_score": score,
+                "why_recommended": why,
+                "varieties": vars_list,
+                "best_sowing_time": str(item.get("best_sowing_time", "Optimal Season")),
+                "crop_duration": str(item.get("crop_duration", "Standard")),
+                "water_requirement": str(item.get("water_requirement", "Moderate")),
+                "expected_yield": str(item.get("expected_yield", "High")),
+                "market_demand": str(item.get("market_demand", "High")),
+                "profitability": str(item.get("profitability", "High")),
+                "possible_risks": risks
+            })
+
+        result["recommended_crops"] = normalized_rc
 
         # Normalize not_recommended
-        if "not_recommended" in result and isinstance(result["not_recommended"], list):
-            for item in result["not_recommended"]:
-                if isinstance(item, dict):
-                    item["name"] = item.get("name") or item.get("crop", "Unsuitable Crop")
-                    item["reason"] = item.get("reason", "Unfavorable soil or climate conditions.")
+        nr_list = result.get("not_recommended")
+        if not isinstance(nr_list, list):
+            nr_list = []
+
+        normalized_nr = []
+        for item in nr_list:
+            if isinstance(item, dict):
+                nr_name = item.get("crop") or item.get("name") or "Unsuitable Crop"
+                normalized_nr.append({
+                    "crop": nr_name,
+                    "name": nr_name,
+                    "reason": str(item.get("reason", "Unfavorable soil or climate conditions."))
+                })
+
+        result["not_recommended"] = normalized_nr
+
+        # Pydantic server-side validation
+        validated_response = CropAdvisoryResponse.model_validate(result)
 
         # Persist to MongoDB if authenticated
         if authorization:
@@ -78,20 +124,20 @@ def crop_advisor(request: CropAdvisorRequest, authorization: Optional[str] = Hea
                         "email": user.get("email"),
                         "soil_type": request.soil_type,
                         "irrigation": request.irrigation,
-                        "best_crop": result.get("best_crop"),
-                        "recommended_crops": result.get("recommended_crops"),
+                        "best_crop": validated_response.best_crop.model_dump(),
+                        "recommended_crops": [rc.model_dump() for rc in validated_response.recommended_crops],
                         "timestamp": datetime.utcnow().isoformat()
                     }
                     crop_col.insert_one(doc)
             except Exception as auth_err:
                 print(f"Notice: Non-blocking auth state in crop advisory ({auth_err})")
 
-        return result
+        return validated_response
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail=f"Crop Advisory generation error: {str(e)}"
         )
 
 

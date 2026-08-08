@@ -78,6 +78,22 @@ const CropCard = ({ crop, index }: { crop: RecommendedCrop; index: number }) => 
                   </div>
                 </div>
               )}
+              {crop.varieties && crop.varieties.length > 0 && (
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: 6 }}>Key Varieties</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {crop.varieties.map((v, i) => (
+                      <div key={i} style={{ background: '#E8F5E9', padding: '6px 10px', borderRadius: 6, fontSize: '0.78rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 700, color: '#1B5E20' }}>{v.name}</span>
+                          {v.expected_yield && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#2E7D32' }}>{v.expected_yield}</span>}
+                        </div>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: 'var(--color-text-secondary)' }}>{v.suitability_note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {INFO_FIELDS.map(({ key, val }) => (
                   <div key={key} style={{ background: '#F5F0E8', borderRadius: 8, padding: '8px 10px' }}>
@@ -170,19 +186,41 @@ export const CropAdvisory = () => {
         {result && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {/* Summary + Best crop */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 28 }}>
-              <div className="card" style={{ padding: 24 }}>
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6 }}>📍 {submittedPlaceName || result.location}</p>
-                <p style={{ lineHeight: 1.7, fontSize: '0.9rem' }}>{result.summary}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 28, alignItems: 'start' }}>
+              <div className="card" style={{ padding: 24, alignSelf: 'start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.82rem', fontWeight: 600, margin: 0 }}>📍 {submittedPlaceName || result.location}</p>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {soil && <span className="badge badge-blue" style={{ fontSize: '0.72rem' }}>🪨 {soil}</span>}
+                    {irrigation && <span className="badge badge-green" style={{ fontSize: '0.72rem' }}>💧 {irrigation}</span>}
+                  </div>
+                </div>
+                <p style={{ lineHeight: 1.7, fontSize: '0.9rem', margin: 0 }}>{result.summary}</p>
               </div>
               <div className="card" style={{ padding: 24, background: 'linear-gradient(135deg, #FFF8E1, #FFFDE7)', border: '2px solid #F9A825' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                   <Trophy size={18} color="#F57F17" />
                   <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#F57F17' }}>{t('crop_top_rec')}</span>
                 </div>
-                <h2 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.6rem', textTransform: 'capitalize', marginBottom: 8 }}>{result.best_crop.name}</h2>
+                <h2 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.6rem', textTransform: 'capitalize', marginBottom: 8 }}>{result.best_crop.name || result.best_crop.crop}</h2>
                 <ConfidenceRing value={result.best_crop.confidence} size={72} />
                 <p style={{ marginTop: 10, fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{result.best_crop.reason}</p>
+                {result.best_crop.varieties && result.best_crop.varieties.length > 0 && (
+                  <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid #FFE082' }}>
+                    <p style={{ fontWeight: 700, fontSize: '0.8rem', color: '#B78103', marginBottom: 6 }}>🌾 Top Varieties:</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {result.best_crop.varieties.map((v, idx) => (
+                        <div key={idx} style={{ background: 'rgba(255, 243, 224, 0.9)', padding: '8px 10px', borderRadius: 8, fontSize: '0.78rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 700, color: '#E65100' }}>{v.name}</span>
+                            {v.expected_yield && <span style={{ fontWeight: 600, color: '#2E7D32', fontSize: '0.72rem' }}>{v.expected_yield}</span>}
+                          </div>
+                          <p style={{ margin: '2px 0 0', color: '#4E342E', fontSize: '0.72rem' }}>{v.suitability_note}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

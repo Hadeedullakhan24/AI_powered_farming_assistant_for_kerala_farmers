@@ -212,11 +212,12 @@ const SchemeCardUI = ({ scheme, index, isBest }: {
               {/* Apply Now CTA */}
               <a
                 id={`scheme-apply-${scheme.scheme_id}`}
-                href={scheme.official_apply_link}
+                href={scheme.official_apply_link || scheme.official_website || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary"
                 style={{ textDecoration: 'none', justifyContent: 'center', marginTop: 4, fontSize: '0.85rem' }}
+                onClick={(e) => { if (!(scheme.official_apply_link || scheme.official_website)) e.preventDefault(); }}
               >
                 <ExternalLink size={14} />
                 {t('gov_apply_now')}
@@ -335,7 +336,7 @@ const LoanCardUI = ({ loan, index, isBest }: {
               )}
               <a
                 id={`loan-apply-${loan.loan_id}`}
-                href={loan.official_apply_link}
+                href={loan.official_apply_link || loan.official_website || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn"
@@ -344,6 +345,7 @@ const LoanCardUI = ({ loan, index, isBest }: {
                   textDecoration: 'none', justifyContent: 'center',
                   fontSize: '0.85rem', borderRadius: 10,
                 }}
+                onClick={(e) => { if (!(loan.official_apply_link || loan.official_website)) e.preventDefault(); }}
               >
                 <ExternalLink size={14} />
                 {t('gov_apply_now')}
@@ -709,11 +711,12 @@ export const GovernmentAdvisory = () => {
                           </p>
                           <a
                             id="gov-best-scheme-apply"
-                            href={result.best_scheme.official_apply_link}
+                            href={result.best_scheme.official_apply_link || result.best_scheme.official_website || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-primary"
                             style={{ textDecoration: 'none', fontSize: '0.82rem', justifyContent: 'center' }}
+                            onClick={(e) => { if (!(result.best_scheme.official_apply_link || result.best_scheme.official_website)) e.preventDefault(); }}
                           >
                             <ExternalLink size={13} /> {t('gov_apply_now')}
                           </a>
@@ -742,7 +745,7 @@ export const GovernmentAdvisory = () => {
                           </div>
                           <a
                             id="gov-best-loan-apply"
-                            href={result.best_loan.official_apply_link}
+                            href={result.best_loan.official_apply_link || result.best_loan.official_website || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn"
@@ -751,6 +754,7 @@ export const GovernmentAdvisory = () => {
                               textDecoration: 'none', fontSize: '0.82rem',
                               justifyContent: 'center', borderRadius: 10,
                             }}
+                            onClick={(e) => { if (!(result.best_loan.official_apply_link || result.best_loan.official_website)) e.preventDefault(); }}
                           >
                             <ExternalLink size={13} /> {t('gov_apply_now')}
                           </a>

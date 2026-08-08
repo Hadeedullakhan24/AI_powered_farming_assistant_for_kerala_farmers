@@ -6,10 +6,12 @@ import i18n from '../../i18n'
 import {
   Home, Leaf, FlaskConical, Sprout, CloudSun, TrendingUp,
   Globe, Menu, X, ChevronDown, MessageCircle, Landmark,
+  Wrench,
 } from 'lucide-react'
 import { LANGUAGES } from '../../lib/constants'
 import { useAuth } from '../../context/AuthContext.tsx'
 import { NavAuthSection } from '../NavAuthSection'
+import { EquipmentNotifications } from '../equipment/EquipmentNotifications'
 
 const NAV_ITEMS = [
   { key: 'nav_home',       path: '/',           icon: Home },
@@ -20,6 +22,7 @@ const NAV_ITEMS = [
   { key: 'nav_market',     path: '/market',     icon: TrendingUp },
   { key: 'nav_assistant',  path: '/assistant',  icon: MessageCircle },
   { key: 'nav_government', path: '/government', icon: Landmark },
+  { key: 'nav_equipment', path: '/equipment-sharing', icon: Wrench },
 ]
 
 const MOBILE_NAV_ITEMS = [...NAV_ITEMS.slice(0, 4), NAV_ITEMS[6], NAV_ITEMS[7]]
@@ -154,6 +157,7 @@ export const Navbar = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <EquipmentNotifications />
           <LanguageSwitcher />
           <NavAuthSection />
         </div>
@@ -174,6 +178,7 @@ export const Navbar = () => {
           </span>
         </NavLink>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <EquipmentNotifications />
           <LanguageSwitcher />
           <button id="hamburger-btn" onClick={() => setDrawerOpen(true)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text)', padding: 4 }}>

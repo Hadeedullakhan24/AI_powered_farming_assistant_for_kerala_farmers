@@ -64,18 +64,29 @@ export interface CropAdvisoryRequest {
   irrigation: string
 }
 
+export interface CropVariety {
+  name: string
+  suitability_note: string
+  expected_yield?: string
+}
+
 export interface BestCrop {
+  crop?: string
   name: string
   confidence: number
   reason: string
+  varieties?: CropVariety[]
 }
 
 export interface RecommendedCrop {
   rank: number
+  recommendation_rank?: number
+  crop?: string
   name: string
   confidence: number
   suitability_score: number
   why_recommended: string[]
+  varieties?: CropVariety[]
   best_sowing_time: string
   crop_duration: string
   water_requirement: string
@@ -90,7 +101,7 @@ export interface CropAdvisoryResponse {
   summary: string
   best_crop: BestCrop
   recommended_crops: RecommendedCrop[]
-  not_recommended: Array<{ name: string; reason: string }>
+  not_recommended: Array<{ crop?: string; name: string; reason: string }>
 }
 
 // ─── Market Intelligence ──────────────────────────────────────────────────────

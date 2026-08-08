@@ -10,6 +10,7 @@ from backend.api.crop_advisor_api import router as crop_advisor_router
 from backend.api.market_api import router as market_router
 from backend.api.government_api import router as government_router
 from backend.api.auth_api import router as auth_router
+from backend.api.equipment_api import router as equipment_router
 from backend.assistant.routes import router as assistant_router
 
 logger = logging.getLogger("hexakrishi.app")
@@ -79,6 +80,7 @@ def health():
     }
 
 app.include_router(auth_router)
+app.include_router(equipment_router)
 app.include_router(disease_router)
 app.include_router(treatment_router)
 app.include_router(
