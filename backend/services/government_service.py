@@ -117,26 +117,16 @@ def filter_eligible_schemes(profile: FarmerProfileRequest) -> list[dict[str, Any
 def filter_eligible_loans(profile: FarmerProfileRequest) -> list[dict[str, Any]]:
     """
     Filter loans against the farmer's profile.
-    KCC and Kerala Bank are almost universally eligible for farmers;
-    if loan_required = Yes, all loans are included.
+    If loan_required = No, returns empty list.
     """
-    all_loans = get_all_loans()
-    eligible_loans: list[dict[str, Any]] = []
-
     is_loan_req = (profile.loan_required or "").strip().lower() in (
         "yes", "true", "1", "required"
     )
+    if not is_loan_req:
+        return []
 
-    for loan in all_loans:
-        loan_name_lower = loan.get("loan_name", "").lower()
-        # KCC and Kerala Bank are universal — include for all farmers
-        if "kisan credit card" in loan_name_lower or "kerala bank" in loan_name_lower:
-            eligible_loans.append(loan)
-        elif is_loan_req:
-            eligible_loans.append(loan)
-
-    # Fallback: never return empty
-    return eligible_loans if eligible_loans else all_loans[:3]
+    all_loans = get_all_loans()
+    return all_loans
 
 
 # ── Financial score calculator ────────────────────────────────────────────────
