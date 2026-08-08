@@ -67,10 +67,12 @@ class RegionalDiseaseItem(BaseModel):
     season: str
     description: str
     prevention: str
+    fertilizer_recommendation: Optional[str] = ""
 
 
 class DiseaseIntelligenceResponse(BaseModel):
     location: str
     crop: str
     region_summary: str
+    fertilizer_advisory: Optional[str] = ""
     diseases: List[RegionalDiseaseItem]

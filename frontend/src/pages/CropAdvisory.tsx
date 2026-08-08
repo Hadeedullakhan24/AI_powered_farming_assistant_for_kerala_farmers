@@ -34,11 +34,16 @@ const RegionalDiseaseSection = ({
   locationName: string
   recommendedCrops: RecommendedCrop[]
 }) => {
-  const navigate = useNavigate()
   const cropList = recommendedCrops.map((c) => c.name || c.crop || 'Crop')
-  const [selectedCrop, setSelectedCrop] = useState<string>(cropList[0] || 'Black Pepper')
+  const [selectedCrop, setSelectedCrop] = useState<string>(cropList[0] || 'Paddy (Rice)')
   const [data, setData] = useState<DiseaseIntelligenceResponse | null>(null)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (cropList.length > 0 && !cropList.includes(selectedCrop)) {
+      setSelectedCrop(cropList[0])
+    }
+  }, [recommendedCrops])
 
   useEffect(() => {
     if (!selectedCrop || !locationName) return
@@ -71,18 +76,18 @@ const RegionalDiseaseSection = ({
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <h2 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.4rem', color: 'var(--color-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            🦠 Regional Disease Intelligence
+            🦠 Regional Disease & Fertilizer Advisory
           </h2>
           <span className="badge badge-gold" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
             {selectedCrop} • {locationName}
           </span>
         </div>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginTop: 6, marginBottom: 0 }}>
-          Diseases commonly associated with this crop and region in Kerala
+          Regional disease vulnerabilities and recommended fertilizer application for recommended crops in {locationName}
         </p>
       </div>
 
-      {/* Crop Selector Tabs */}
+      {/* Crop Selector Tabs for Recommended Crops */}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 10, marginBottom: 20 }}>
         {cropList.map((cropName) => (
           <button
@@ -109,19 +114,31 @@ const RegionalDiseaseSection = ({
 
       {loading ? (
         <div style={{ padding: '30px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
-          ⏳ Loading regional disease risk data...
+          ⏳ Loading regional disease risk & fertilizer data...
         </div>
       ) : data && data.diseases.length > 0 ? (
         <>
-          {/* Summary Box */}
-          <div style={{ background: '#FFF', padding: '14px 18px', borderRadius: 10, borderLeft: '4px solid var(--color-primary)', marginBottom: 24, fontSize: '0.88rem', color: 'var(--color-text)' }}>
+          {/* Region Summary Box */}
+          <div style={{ background: '#FFF', padding: '14px 18px', borderRadius: 10, borderLeft: '4px solid var(--color-primary)', marginBottom: 20, fontSize: '0.88rem', color: 'var(--color-text)' }}>
             <p style={{ margin: 0, lineHeight: 1.6 }}>{data.region_summary}</p>
           </div>
+
+          {/* Fertilizer Advisory Box */}
+          {data.fertilizer_advisory && (
+            <div style={{ background: 'linear-gradient(135deg, #E8F5E9, #F1F8E9)', padding: '16px 18px', borderRadius: 12, border: '1px solid #A5D6A7', marginBottom: 24 }}>
+              <h4 style={{ margin: '0 0 6px', fontSize: '0.92rem', fontFamily: 'Poppins, sans-serif', color: '#1B5E20', display: 'flex', alignItems: 'center', gap: 6 }}>
+                🧪 Recommended Fertilizer Schedule & Soil Nutrition ({selectedCrop})
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.84rem', color: '#2E7D32', lineHeight: 1.6 }}>
+                {data.fertilizer_advisory}
+              </p>
+            </div>
+          )}
 
           {/* Recharts Horizontal Bar Chart */}
           <div style={{ background: '#FFF', padding: 20, borderRadius: 12, marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
             <h4 style={{ margin: '0 0 16px', fontSize: '0.92rem', fontFamily: 'Poppins, sans-serif', color: 'var(--color-text)' }}>
-              Regional Disease Vulnerability & Categorical Risk Levels
+              Regional Disease Vulnerability & Categorical Risk Levels ({selectedCrop})
             </h4>
             <div style={{ width: '100%', height: Math.max(220, chartData.length * 45) }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -160,7 +177,7 @@ const RegionalDiseaseSection = ({
           </div>
 
           {/* Disease Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
             {data.diseases.map((d, i) => {
               const badgeClass = d.risk_level === 'High' ? 'badge-red' : d.risk_level === 'Medium' ? 'badge-gold' : 'badge-green'
               return (
@@ -182,38 +199,24 @@ const RegionalDiseaseSection = ({
                     <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>{d.description}</p>
                   </div>
 
-                  {d.prevention && (
-                    <div style={{ background: '#F5F9F6', padding: '10px 12px', borderRadius: 8, fontSize: '0.78rem', borderLeft: '3px solid #388E3C' }}>
-                      <span style={{ fontWeight: 700, color: '#1B5E20', display: 'block', marginBottom: 2 }}>Shield Prevention:</span>
-                      <span style={{ color: '#2E7D32', lineHeight: 1.4 }}>{d.prevention}</span>
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                    {d.prevention && (
+                      <div style={{ background: '#F5F9F6', padding: '10px 12px', borderRadius: 8, fontSize: '0.78rem', borderLeft: '3px solid #388E3C' }}>
+                        <span style={{ fontWeight: 700, color: '#1B5E20', display: 'block', marginBottom: 2 }}>Shield Prevention:</span>
+                        <span style={{ color: '#2E7D32', lineHeight: 1.4 }}>{d.prevention}</span>
+                      </div>
+                    )}
+
+                    {d.fertilizer_recommendation && (
+                      <div style={{ background: '#FFFDE7', padding: '10px 12px', borderRadius: 8, fontSize: '0.78rem', borderLeft: '3px solid #F57F17' }}>
+                        <span style={{ fontWeight: 700, color: '#E65100', display: 'block', marginBottom: 2 }}>🧪 Recommended Fertilizer Management:</span>
+                        <span style={{ color: '#F57F17', lineHeight: 1.4 }}>{d.fertilizer_recommendation}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}
-          </div>
-
-          {/* CTA Bar */}
-          <div style={{ background: 'linear-gradient(135deg, #E8F5E9, #C8E6C9)', padding: '16px 20px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, border: '1px solid #A5D6A7' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <ShieldAlert size={22} color="#2E7D32" />
-              <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#1B5E20' }}>
-                  Have a suspected disease on your {selectedCrop}?
-                </p>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: '#33691E' }}>
-                  Upload a leaf image to get instant AI disease detection & treatment steps.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/disease')}
-              className="btn btn-primary"
-              style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, background: '#2E7D32', border: 'none' }}
-            >
-              <Search size={14} /> Detect Disease
-            </button>
           </div>
         </>
       ) : (

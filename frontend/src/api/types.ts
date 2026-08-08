@@ -116,12 +116,14 @@ export interface RegionalDiseaseItem {
   season: string
   description: string
   prevention: string
+  fertilizer_recommendation?: string
 }
 
 export interface DiseaseIntelligenceResponse {
   location: string
   crop: string
   region_summary: string
+  fertilizer_advisory?: string
   diseases: RegionalDiseaseItem[]
 }
 
