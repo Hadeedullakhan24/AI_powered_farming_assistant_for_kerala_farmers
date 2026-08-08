@@ -98,6 +98,14 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
+                    <Route
+                      path="/equipment"
+                      element={
+                        <ProtectedRoute>
+                          <EquipmentSharing />
+                        </ProtectedRoute>
+                      }
+                    />
                   </Routes>
                 </AnimatePresence>
                 <ChatWidget />

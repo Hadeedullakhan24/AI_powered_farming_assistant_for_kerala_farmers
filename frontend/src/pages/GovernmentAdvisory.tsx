@@ -5,7 +5,7 @@ import { useMutation } from '@tanstack/react-query'
 import {
   ShieldCheck, TrendingUp, FileText, Bell, LayoutDashboard,
   ExternalLink, Phone, Calendar, Award, AlertTriangle,
-  CheckCircle2, ChevronDown, ChevronUp, Landmark, BadgeIndianRupee,
+  CheckCircle2, ChevronDown, ChevronUp, Landmark, BadgeIndianRupee, Search,
 } from 'lucide-react'
 import { PageTransition } from '../components/shared/PageTransition'
 import { SkeletonCard } from '../components/shared/SkeletonCard'
@@ -13,6 +13,25 @@ import { ErrorCard } from '../components/shared/ErrorCard'
 import { getGovernmentAdvisory } from '../api/endpoints'
 import type { GovernmentResponse, SchemeCard, LoanCard } from '../api/types'
 import { CROPS, KERALA_DISTRICTS } from '../lib/constants'
+
+// ── Apply URL helper: use AI deep-link if it has a real path, else Google Search ──
+function buildApplyUrl(applyLink: string | undefined, website: string | undefined, name: string): string {
+  const raw = (applyLink || website || '').trim()
+  if (!raw.startsWith('http')) {
+    return `https://www.google.com/search?q=${encodeURIComponent(name + ' official apply online India government')}`
+  }
+  try {
+    const u = new URL(raw)
+    const hasRealPath = u.pathname && u.pathname.length > 1
+    if (!hasRealPath) {
+      return `https://www.google.com/search?q=${encodeURIComponent(name + ' official apply online India government')}`
+    }
+    return raw
+  } catch {
+    return `https://www.google.com/search?q=${encodeURIComponent(name + ' official apply online India government')}`
+  }
+}
+function isGoogleSearch(url: string) { return url.startsWith('https://www.google.com/search') }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -46,24 +65,28 @@ const TAB_ICONS: Record<GovTab, React.ReactNode> = {
 // ── Financial Score Gauge ─────────────────────────────────────────────────────
 
 const ScoreGauge = ({ score, level }: { score: number; level: string }) => {
-  const color =
-    level === 'High' ? '#2E7D32' :
-    level === 'Medium' ? '#F57F17' : '#C62828'
+  const arcColor =
+    level === 'High' ? '#66BB6A' :
+    level === 'Medium' ? '#FFCA28' : '#EF5350'
+
+  const badgeTextColor =
+    level === 'High' ? '#1B5E20' :
+    level === 'Medium' ? '#E65100' : '#B71C1C'
 
   const circumference = 2 * Math.PI * 48
   const dash = (score / 100) * circumference
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
       <div style={{ position: 'relative', width: 120, height: 120 }}>
         <svg width="120" height="120" viewBox="0 0 120 120">
-          {/* Background circle */}
-          <circle cx="60" cy="60" r="48" fill="none" stroke="#E8E0D0" strokeWidth="10" />
-          {/* Score arc */}
+          {/* Background circle track */}
+          <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255, 255, 255, 0.25)" strokeWidth="10" />
+          {/* Score progress arc */}
           <motion.circle
             cx="60" cy="60" r="48"
             fill="none"
-            stroke={color}
+            stroke={arcColor}
             strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={`${circumference}`}
@@ -77,15 +100,23 @@ const ScoreGauge = ({ score, level }: { score: number; level: string }) => {
           position: 'absolute', inset: 0, display: 'flex',
           flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}>
-          <span style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: '1.6rem', color, lineHeight: 1 }}>
+          <span style={{
+            fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: '1.75rem',
+            color: '#FFFFFF', lineHeight: 1, textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+          }}>
             {score}
           </span>
-          <span style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>/ 100</span>
+          <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.85)', fontWeight: 600, marginTop: 2 }}>
+            / 100
+          </span>
         </div>
       </div>
       <span
-        className={`badge ${level === 'High' ? 'badge-green' : level === 'Medium' ? 'badge-amber' : 'badge-red'}`}
-        style={{ fontSize: '0.8rem' }}
+        style={{
+          fontSize: '0.8rem', fontWeight: 700, background: '#FFFFFF',
+          color: badgeTextColor, padding: '4px 14px', borderRadius: 999,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.15)', display: 'inline-block',
+        }}
       >
         {level} Strength
       </span>
@@ -209,27 +240,51 @@ const SchemeCardUI = ({ scheme, index, isBest }: {
                 </div>
               )}
 
-              {/* Apply Now CTA */}
-              <a
-                id={`scheme-apply-${scheme.scheme_id}`}
-                href={scheme.official_apply_link || scheme.official_website || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary"
-                style={{ textDecoration: 'none', justifyContent: 'center', marginTop: 4, fontSize: '0.85rem' }}
-                onClick={(e) => { if (!(scheme.official_apply_link || scheme.official_website)) e.preventDefault(); }}
-              >
-                <ExternalLink size={14} />
-                {t('gov_apply_now')}
-              </a>
-              <a
-                href={scheme.official_website}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: '0.75rem', color: 'var(--color-primary)', textAlign: 'center', textDecoration: 'underline' }}
-              >
-                {t('gov_official_source')}: {scheme.official_website}
-              </a>
+
+              {/* Apply Now CTA — smart: deep link or Google Search fallback */}
+              {(() => {
+                const finalUrl = buildApplyUrl(scheme.official_apply_link, scheme.official_website, scheme.scheme_name)
+                const usingSearch = isGoogleSearch(finalUrl)
+                let portalLabel = 'Official Portal'
+                if (usingSearch) portalLabel = 'Search Online'
+                else { try { portalLabel = new URL(finalUrl).hostname.replace('www.', '') } catch {} }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                    <a
+                      id={`scheme-apply-${scheme.scheme_id}`}
+                      href={finalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary"
+                      style={{ textDecoration: 'none', justifyContent: 'center', fontSize: '0.85rem' }}
+                    >
+                      {usingSearch ? <Search size={14} /> : <ExternalLink size={14} />}
+                      {usingSearch
+                        ? `Find "${scheme.scheme_name}" Apply Page`
+                        : `${t('gov_apply_now')} — ${portalLabel}`}
+                    </a>
+                    {scheme.state === 'Central' && (
+                      <a
+                        href="https://www.jansamarth.in"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: '0.75rem', color: 'var(--color-primary)',
+                          textAlign: 'center', textDecoration: 'underline',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                        }}
+                      >
+                        <ExternalLink size={11} /> Also apply via JanSamarth Portal (jansamarth.in)
+                      </a>
+                    )}
+                    {scheme.official_website && (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+                        Official site: {scheme.official_website}
+                      </span>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           </motion.div>
         )}
@@ -334,30 +389,55 @@ const LoanCardUI = ({ loan, index, isBest }: {
                   </p>
                 </div>
               )}
-              <a
-                id={`loan-apply-${loan.loan_id}`}
-                href={loan.official_apply_link || loan.official_website || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn"
-                style={{
-                  background: '#1565C0', color: '#fff',
-                  textDecoration: 'none', justifyContent: 'center',
-                  fontSize: '0.85rem', borderRadius: 10,
-                }}
-                onClick={(e) => { if (!(loan.official_apply_link || loan.official_website)) e.preventDefault(); }}
-              >
-                <ExternalLink size={14} />
-                {t('gov_apply_now')}
-              </a>
-              <a
-                href={loan.official_website}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: '0.75rem', color: '#1565C0', textAlign: 'center', textDecoration: 'underline' }}
-              >
-                {t('gov_official_source')}: {loan.official_website}
-              </a>
+              {/* Apply Now CTA — smart: deep link or Google Search fallback */}
+              {(() => {
+                const finalUrl = buildApplyUrl(loan.official_apply_link, loan.official_website, loan.loan_name)
+                const usingSearch = isGoogleSearch(finalUrl)
+                const isJanSamarth = finalUrl.includes('jansamarth')
+                let portalLabel = 'Official Portal'
+                if (usingSearch) portalLabel = 'Search Online'
+                else { try { portalLabel = new URL(finalUrl).hostname.replace('www.', '') } catch {} }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <a
+                      id={`loan-apply-${loan.loan_id}`}
+                      href={finalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn"
+                      style={{
+                        background: isJanSamarth ? '#0D47A1' : '#1565C0',
+                        color: '#fff', textDecoration: 'none',
+                        justifyContent: 'center', fontSize: '0.85rem', borderRadius: 10,
+                      }}
+                    >
+                      {usingSearch ? <Search size={14} /> : <ExternalLink size={14} />}
+                      {usingSearch
+                        ? `Find "${loan.loan_name}" Apply Page`
+                        : `${t('gov_apply_now')} — ${portalLabel}`}
+                    </a>
+                    {!isJanSamarth && (
+                      <a
+                        href="https://www.jansamarth.in"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: '0.75rem', color: '#1565C0',
+                          textAlign: 'center', textDecoration: 'underline',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                        }}
+                      >
+                        <ExternalLink size={11} /> Also apply via JanSamarth Portal (jansamarth.in)
+                      </a>
+                    )}
+                    {loan.official_website && (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+                        Official site: {loan.official_website}
+                      </span>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           </motion.div>
         )}
@@ -411,6 +491,8 @@ export const GovernmentAdvisory = () => {
   const [result, setResult] = useState<GovernmentResponse | null>(null)
   const [activeTab, setActiveTab] = useState<GovTab>('gov_tab_overview')
   const [checkedDocs, setCheckedDocs] = useState<Set<string>>(new Set())
+  // Track what the user submitted so results can adapt
+  const [submittedLoanRequired, setSubmittedLoanRequired] = useState<string>('Yes')
 
   const isFormValid = district && crop && landArea && landOwnership && farmerCategory && annualIncome
 
@@ -429,6 +511,7 @@ export const GovernmentAdvisory = () => {
       setResult(data)
       setActiveTab('gov_tab_overview')
       setCheckedDocs(new Set())
+      setSubmittedLoanRequired(loanRequired)   // capture at submission time
     },
   })
 
@@ -630,9 +713,11 @@ export const GovernmentAdvisory = () => {
               </div>
             </div>
 
-            {/* Tab Bar */}
+            {/* Tab Bar — hide Loans tab when user said loan not required */}
             <div className="tab-bar" style={{ marginBottom: 20 }}>
-              {GOV_TABS.map(tab => (
+              {GOV_TABS
+                .filter(tab => !(tab === 'gov_tab_loans' && submittedLoanRequired === 'No'))
+                .map(tab => (
                 <button
                   key={tab}
                   id={`gov-tab-${tab}`}
@@ -685,6 +770,13 @@ export const GovernmentAdvisory = () => {
                               <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.6, color: '#311B92' }}>{result.ai_explanation.why_best_scheme}</p>
                             </div>
                           )}
+                          {/* Only show loan explanation when loan was requested */}
+                          {submittedLoanRequired !== 'No' && result.ai_explanation.why_best_loan && (
+                            <div>
+                              <p style={{ fontWeight: 600, fontSize: '0.78rem', marginBottom: 4, color: '#4A148C' }}>Best Loan Reason</p>
+                              <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.6, color: '#311B92' }}>{result.ai_explanation.why_best_loan}</p>
+                            </div>
+                          )}
                           {result.ai_explanation.financial_benefit_breakdown && (
                             <div>
                               <p style={{ fontWeight: 600, fontSize: '0.78rem', marginBottom: 4, color: '#4A148C' }}>Financial Benefit</p>
@@ -711,19 +803,19 @@ export const GovernmentAdvisory = () => {
                           </p>
                           <a
                             id="gov-best-scheme-apply"
-                            href={result.best_scheme.official_apply_link || result.best_scheme.official_website || '#'}
+                            href={buildApplyUrl(result.best_scheme.official_apply_link, result.best_scheme.official_website, result.best_scheme.scheme_name)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-primary"
                             style={{ textDecoration: 'none', fontSize: '0.82rem', justifyContent: 'center' }}
-                            onClick={(e) => { if (!(result.best_scheme.official_apply_link || result.best_scheme.official_website)) e.preventDefault(); }}
                           >
                             <ExternalLink size={13} /> {t('gov_apply_now')}
                           </a>
                         </div>
                       )}
 
-                      {result.best_loan?.loan_name && (
+                      {/* Best Loan card — only shown when user requested a loan */}
+                      {submittedLoanRequired !== 'No' && result.best_loan?.loan_name && (
                         <div className="card" style={{ padding: 20, border: '2px solid #1565C0' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                             <Landmark size={18} color="#1565C0" />
@@ -745,7 +837,7 @@ export const GovernmentAdvisory = () => {
                           </div>
                           <a
                             id="gov-best-loan-apply"
-                            href={result.best_loan.official_apply_link || result.best_loan.official_website || '#'}
+                            href={buildApplyUrl(result.best_loan.official_apply_link, result.best_loan.official_website, result.best_loan.loan_name)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn"
@@ -754,7 +846,6 @@ export const GovernmentAdvisory = () => {
                               textDecoration: 'none', fontSize: '0.82rem',
                               justifyContent: 'center', borderRadius: 10,
                             }}
-                            onClick={(e) => { if (!(result.best_loan.official_apply_link || result.best_loan.official_website)) e.preventDefault(); }}
                           >
                             <ExternalLink size={13} /> {t('gov_apply_now')}
                           </a>

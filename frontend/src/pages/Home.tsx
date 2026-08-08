@@ -114,7 +114,7 @@ const MODULES = [
   },
   {
     key: 'nav_equipment',
-    path: '/equipment',
+    path: '/equipment-sharing',
     icon: Wrench,
     title: 'Equipment Sharing',
     tagline: 'Peer-to-Peer Rental',
@@ -134,7 +134,7 @@ const QUICK_BADGES = [
   { label: '📈 Live Market Prices', path: '/market' },
   { label: '🤖 AI Chat Assistant', path: '/assistant' },
   { label: '🏛️ Gov. Schemes', path: '/government' },
-  { label: '🚜 Equipment Sharing', path: '/equipment' },
+  { label: '🚜 Equipment Sharing', path: '/equipment-sharing' },
 ]
 
 const STATS = [

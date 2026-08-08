@@ -14,6 +14,7 @@ from backend.database.mongo import get_equipment_listings_collection
 logger = logging.getLogger("hexakrishi.equipment")
 router = APIRouter(prefix="/api/equipment", tags=["Equipment Sharing"])
 EquipmentType = Literal["tiller", "sprayer", "harvester", "water_pump", "other"]
+ListingIntent = Literal["rent", "sale"]
 AvailabilityStatus = Literal["available", "requested", "booked"]
 
 
@@ -23,6 +24,8 @@ class EquipmentListingCreate(BaseModel):
     description: str = Field(min_length=1, max_length=1000)
     location: str = Field(min_length=1, max_length=160)
     contact_number: str = Field(min_length=7, max_length=25)
+    listing_intent: Optional[ListingIntent] = Field(default="rent")
+    price_or_rate: Optional[str] = Field(default=None, max_length=60)
 
 
 class EquipmentRequestCreate(BaseModel):
@@ -53,8 +56,10 @@ def _object_id(listing_id: str) -> ObjectId:
 def _serialize(document: dict) -> dict:
     document = document.copy()
     document["_id"] = str(document["_id"])
-    # Old one-request documents remain readable after the schema upgrade.
     document.setdefault("requests", [])
+    document.setdefault("listing_intent", "rent")
+    document.setdefault("price_or_rate", "")
+    document.setdefault("owner_email", "")
     return document
 
 
@@ -69,11 +74,19 @@ def _fresh_listing(collection, object_id: ObjectId) -> dict:
 def create_listing(payload: EquipmentListingCreate, authorization: Optional[str] = Header(None)):
     user = _user(authorization)
     listing = {
-        "owner_id": user["id"], "owner_name": user["name"],
-        "equipment_name": payload.equipment_name.strip(), "equipment_type": payload.equipment_type,
-        "description": payload.description.strip(), "location": payload.location.strip(),
-        "contact_number": payload.contact_number.strip(), "availability_status": "available",
-        "requests": [], "created_at": datetime.now(timezone.utc).isoformat(),
+        "owner_id": user["id"],
+        "owner_name": user["name"],
+        "owner_email": user.get("email", ""),
+        "equipment_name": payload.equipment_name.strip(),
+        "equipment_type": payload.equipment_type,
+        "description": payload.description.strip(),
+        "location": payload.location.strip(),
+        "contact_number": payload.contact_number.strip(),
+        "listing_intent": payload.listing_intent or "rent",
+        "price_or_rate": payload.price_or_rate.strip() if payload.price_or_rate else "",
+        "availability_status": "available",
+        "requests": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
     try:
         result = _collection().insert_one(listing)
@@ -109,10 +122,14 @@ def request_equipment(listing_id: str, payload: EquipmentRequestCreate, authoriz
     if existing:
         raise HTTPException(status_code=409, detail="You already have a pending request for this equipment")
     request = {
-        "request_id": str(uuid4()), "requester_id": user["id"],
-        "requester_name": payload.requester_name.strip(), "requester_address": payload.requester_address.strip(),
+        "request_id": str(uuid4()),
+        "requester_id": user["id"],
+        "requester_name": payload.requester_name.strip(),
+        "requester_email": user.get("email", ""),
+        "requester_address": payload.requester_address.strip(),
         "requester_contact_number": payload.requester_contact_number.strip(),
-        "message": payload.message.strip() if payload.message else None, "status": "pending",
+        "message": payload.message.strip() if payload.message else None,
+        "status": "pending",
         "requested_at": datetime.now(timezone.utc).isoformat(),
     }
     result = collection.update_one({"_id": object_id, "availability_status": {"$ne": "booked"}}, {"$push": {"requests": request}, "$set": {"availability_status": "requested"}})
@@ -159,7 +176,6 @@ def reject_request(listing_id: str, request_id: str, authorization: Optional[str
 @router.get("/my-listings")
 def my_listings(authorization: Optional[str] = Header(None)):
     user = _user(authorization)
-    # This always reads MongoDB directly; cache headers explicitly prevent intermediary reuse.
     return {"listings": [_serialize(doc) for doc in _collection().find({"owner_id": user["id"]}).sort("created_at", -1)]}
 
 
@@ -180,7 +196,12 @@ def my_requests_sent(authorization: Optional[str] = Header(None)):
             if request.get("requester_id") == user["id"]:
                 equipment = _serialize(listing)
                 equipment.pop("requests", None)
-                equipment["contact_number"] = listing["contact_number"] if request.get("status") == "accepted" else None
+                # When accepted, supply owner's contact details so borrower/buyer can reach out
+                if request.get("status") == "accepted":
+                    equipment["contact_number"] = listing.get("contact_number", "")
+                    equipment["owner_email"] = listing.get("owner_email", "")
+                else:
+                    equipment["contact_number"] = None
                 records.append({
                     "listing": equipment,
                     "request": request,
