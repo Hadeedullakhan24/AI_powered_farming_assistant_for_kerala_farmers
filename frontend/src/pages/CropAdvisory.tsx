@@ -1,17 +1,229 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
-import { ChevronDown, ChevronUp, AlertTriangle, Trophy } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ChevronDown, ChevronUp, AlertTriangle, Trophy, ShieldAlert, Search, Calendar } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
 import { PageTransition } from '../components/shared/PageTransition'
 import { LocationPicker } from '../components/shared/LocationPicker'
 import type { LocationPickerData } from '../components/shared/LocationPicker'
 import { ConfidenceRing } from '../components/shared/ConfidenceRing'
 import { SkeletonGrid } from '../components/shared/SkeletonCard'
 import { ErrorCard } from '../components/shared/ErrorCard'
-import { getCropAdvisory } from '../api/endpoints'
-import type { CropAdvisoryResponse, RecommendedCrop } from '../api/types'
+import { getCropAdvisory, getCropDiseaseIntelligence } from '../api/endpoints'
+import type { CropAdvisoryResponse, RecommendedCrop, DiseaseIntelligenceResponse } from '../api/types'
 import { SOIL_TYPES, IRRIGATION_TYPES } from '../lib/constants'
+
+const RISK_NUMERIC_MAP: Record<string, number> = {
+  High: 3,
+  Medium: 2,
+  Low: 1,
+}
+
+const RISK_COLOR_MAP: Record<string, string> = {
+  High: '#D32F2F',
+  Medium: '#F57C00',
+  Low: '#388E3C',
+}
+
+const RegionalDiseaseSection = ({
+  locationName,
+  recommendedCrops,
+}: {
+  locationName: string
+  recommendedCrops: RecommendedCrop[]
+}) => {
+  const navigate = useNavigate()
+  const cropList = recommendedCrops.map((c) => c.name || c.crop || 'Crop')
+  const [selectedCrop, setSelectedCrop] = useState<string>(cropList[0] || 'Black Pepper')
+  const [data, setData] = useState<DiseaseIntelligenceResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!selectedCrop || !locationName) return
+    let isSubscribed = true
+    setLoading(true)
+    getCropDiseaseIntelligence({ location: locationName, crop: selectedCrop })
+      .then((res) => {
+        if (isSubscribed) setData(res)
+      })
+      .catch((err) => console.warn('[DiseaseIntelligence] Error:', err))
+      .finally(() => {
+        if (isSubscribed) setLoading(false)
+      })
+    return () => {
+      isSubscribed = false
+    }
+  }, [selectedCrop, locationName])
+
+  if (!recommendedCrops || recommendedCrops.length === 0) return null
+
+  const chartData = (data?.diseases || []).map((d) => ({
+    name: d.name.length > 22 ? d.name.slice(0, 20) + '...' : d.name,
+    fullName: d.name,
+    riskLevel: d.risk_level,
+    riskValue: RISK_NUMERIC_MAP[d.risk_level] || 2,
+  }))
+
+  return (
+    <div className="card" style={{ padding: 24, marginTop: 32, background: '#FAF7F2' }}>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <h2 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.4rem', color: 'var(--color-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            🦠 Regional Disease Intelligence
+          </h2>
+          <span className="badge badge-gold" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+            {selectedCrop} • {locationName}
+          </span>
+        </div>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginTop: 6, marginBottom: 0 }}>
+          Diseases commonly associated with this crop and region in Kerala
+        </p>
+      </div>
+
+      {/* Crop Selector Tabs */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 10, marginBottom: 20 }}>
+        {cropList.map((cropName) => (
+          <button
+            key={cropName}
+            type="button"
+            onClick={() => setSelectedCrop(cropName)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 20,
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              border: selectedCrop === cropName ? '2px solid var(--color-primary)' : '1px solid #E0D6C8',
+              background: selectedCrop === cropName ? 'var(--color-primary)' : '#FFF',
+              color: selectedCrop === cropName ? '#FFF' : 'var(--color-text)',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {cropName}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div style={{ padding: '30px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+          ⏳ Loading regional disease risk data...
+        </div>
+      ) : data && data.diseases.length > 0 ? (
+        <>
+          {/* Summary Box */}
+          <div style={{ background: '#FFF', padding: '14px 18px', borderRadius: 10, borderLeft: '4px solid var(--color-primary)', marginBottom: 24, fontSize: '0.88rem', color: 'var(--color-text)' }}>
+            <p style={{ margin: 0, lineHeight: 1.6 }}>{data.region_summary}</p>
+          </div>
+
+          {/* Recharts Horizontal Bar Chart */}
+          <div style={{ background: '#FFF', padding: 20, borderRadius: 12, marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+            <h4 style={{ margin: '0 0 16px', fontSize: '0.92rem', fontFamily: 'Poppins, sans-serif', color: 'var(--color-text)' }}>
+              Regional Disease Vulnerability & Categorical Risk Levels
+            </h4>
+            <div style={{ width: '100%', height: Math.max(220, chartData.length * 45) }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#EFEBE4" />
+                  <XAxis
+                    type="number"
+                    domain={[0, 3]}
+                    ticks={[1, 2, 3]}
+                    tickFormatter={(val) => (val === 3 ? 'High Risk' : val === 2 ? 'Medium Risk' : val === 1 ? 'Low Risk' : '')}
+                    tick={{ fontSize: 11, fill: '#666' }}
+                  />
+                  <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11, fill: '#333', fontWeight: 500 }} />
+                  <Tooltip
+                    content={({ payload }) => {
+                      if (!payload || !payload.length) return null
+                      const item = payload[0].payload
+                      return (
+                        <div style={{ background: '#333', color: '#FFF', padding: '6px 12px', borderRadius: 6, fontSize: '0.78rem' }}>
+                          <p style={{ margin: 0, fontWeight: 700 }}>{item.fullName}</p>
+                          <p style={{ margin: '2px 0 0', color: RISK_COLOR_MAP[item.riskLevel] || '#FFF' }}>
+                            Risk Level: {item.riskLevel}
+                          </p>
+                        </div>
+                      )
+                    }}
+                  />
+                  <Bar dataKey="riskValue" radius={[0, 6, 6, 0]} barSize={20}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={RISK_COLOR_MAP[entry.riskLevel] || '#8884d8'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Disease Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
+            {data.diseases.map((d, i) => {
+              const badgeClass = d.risk_level === 'High' ? 'badge-red' : d.risk_level === 'Medium' ? 'badge-gold' : 'badge-green'
+              return (
+                <div key={i} style={{ background: '#FFF', padding: 18, borderRadius: 12, border: '1px solid #EFEBE4', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text)' }}>{d.name}</h4>
+                      <span className={`badge ${badgeClass}`} style={{ fontSize: '0.7rem', flexShrink: 0 }}>
+                        {d.risk_level} Risk
+                      </span>
+                    </div>
+
+                    {d.season && (
+                      <div style={{ fontSize: '0.74rem', color: '#558B2F', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Calendar size={12} /> {d.season}
+                      </div>
+                    )}
+
+                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>{d.description}</p>
+                  </div>
+
+                  {d.prevention && (
+                    <div style={{ background: '#F5F9F6', padding: '10px 12px', borderRadius: 8, fontSize: '0.78rem', borderLeft: '3px solid #388E3C' }}>
+                      <span style={{ fontWeight: 700, color: '#1B5E20', display: 'block', marginBottom: 2 }}>Shield Prevention:</span>
+                      <span style={{ color: '#2E7D32', lineHeight: 1.4 }}>{d.prevention}</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* CTA Bar */}
+          <div style={{ background: 'linear-gradient(135deg, #E8F5E9, #C8E6C9)', padding: '16px 20px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, border: '1px solid #A5D6A7' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <ShieldAlert size={22} color="#2E7D32" />
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#1B5E20' }}>
+                  Have a suspected disease on your {selectedCrop}?
+                </p>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: '#33691E' }}>
+                  Upload a leaf image to get instant AI disease detection & treatment steps.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/disease')}
+              className="btn btn-primary"
+              style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, background: '#2E7D32', border: 'none' }}
+            >
+              <Search size={14} /> Detect Disease
+            </button>
+          </div>
+        </>
+      ) : (
+        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+          No regional disease information is currently available for this crop and location.
+        </div>
+      )}
+    </div>
+  )
+}
 
 const CropCard = ({ crop, index }: { crop: RecommendedCrop; index: number }) => {
   const { t } = useTranslation()
@@ -247,6 +459,12 @@ export const CropAdvisory = () => {
                 </div>
               </div>
             )}
+
+            {/* Regional Crop Disease Intelligence Section */}
+            <RegionalDiseaseSection
+              locationName={submittedPlaceName || result.location}
+              recommendedCrops={result.recommended_crops}
+            />
           </motion.div>
         )}
       </div>

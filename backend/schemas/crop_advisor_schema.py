@@ -53,3 +53,24 @@ class CropAdvisoryResponse(BaseModel):
     best_crop: BestCrop
     recommended_crops: List[RecommendedCrop]
     not_recommended: List[NotRecommendedCrop]
+
+
+class DiseaseIntelligenceRequest(BaseModel):
+    location: str
+    crop: str
+
+
+class RegionalDiseaseItem(BaseModel):
+    name: str
+    risk_level: str  # "High", "Medium", "Low"
+    affected_crop: str
+    season: str
+    description: str
+    prevention: str
+
+
+class DiseaseIntelligenceResponse(BaseModel):
+    location: str
+    crop: str
+    region_summary: str
+    diseases: List[RegionalDiseaseItem]

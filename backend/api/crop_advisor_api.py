@@ -2,14 +2,35 @@ from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Header
 
-from backend.schemas.crop_advisor_schema import CropAdvisorRequest, CropAdvisoryResponse
+from backend.schemas.crop_advisor_schema import (
+    CropAdvisorRequest,
+    CropAdvisoryResponse,
+    DiseaseIntelligenceRequest,
+    DiseaseIntelligenceResponse,
+)
 from backend.services.weather_service import get_weather
 from backend.services.season_service import get_season
 from backend.services.groq_services import get_crop_advice
+from backend.services.disease_intelligence_service import get_regional_disease_intelligence
 from backend.database.mongo import get_crop_history_collection
 from backend.api.auth_api import get_current_user_from_token
 
 router = APIRouter()
+
+
+@router.post("/crop-disease-intelligence", response_model=DiseaseIntelligenceResponse)
+def crop_disease_intelligence(request: DiseaseIntelligenceRequest):
+    try:
+        data = get_regional_disease_intelligence(
+            location=request.location,
+            crop=request.crop,
+        )
+        return DiseaseIntelligenceResponse.model_validate(data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Regional Disease Intelligence error: {str(e)}"
+        )
 
 
 @router.post("/crop-advisor", response_model=CropAdvisoryResponse)

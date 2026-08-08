@@ -26,14 +26,26 @@ export const SpeakButton = ({ text }: SpeakButtonProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const isWebSpeechPlayingRef = useRef(false)
 
-  // Clean markdown symbols (e.g. **bold**, 🦠 emojis, etc.) before speaking
+  // Clean markdown symbols and format concise text for speech
   const cleanTextForSpeech = (raw: string): string => {
-    return raw
+    let cleaned = raw
+      .replace(/```[\s\S]*?```/g, '')
       .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
       .replace(/#/g, '')
-      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // strip emojis
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // strip emojis
+      .replace(/[-•·]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
+
+    const sentences = cleaned.match(/[^.!?]+[.!?]+/g)
+    if (sentences && sentences.length > 0) {
+      return sentences.slice(0, 3).join(' ')
+    }
+    if (cleaned.length > 300) {
+      return cleaned.slice(0, 300) + '.'
+    }
+    return cleaned
   }
 
   const stopAllSpeech = () => {
@@ -106,7 +118,7 @@ export const SpeakButton = ({ text }: SpeakButtonProps) => {
         if (!window.speechSynthesis.speaking && !isWebSpeechPlayingRef.current && state === 'idle') {
           fallbackBackendTTS(spokenText, targetLang)
         }
-      }, 300)
+      }, 1200)
 
       return
     }

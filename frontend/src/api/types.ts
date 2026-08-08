@@ -104,6 +104,27 @@ export interface CropAdvisoryResponse {
   not_recommended: Array<{ crop?: string; name: string; reason: string }>
 }
 
+export interface DiseaseIntelligenceRequest {
+  location: string
+  crop: string
+}
+
+export interface RegionalDiseaseItem {
+  name: string
+  risk_level: 'High' | 'Medium' | 'Low' | string
+  affected_crop: string
+  season: string
+  description: string
+  prevention: string
+}
+
+export interface DiseaseIntelligenceResponse {
+  location: string
+  crop: string
+  region_summary: string
+  diseases: RegionalDiseaseItem[]
+}
+
 // ─── Market Intelligence ──────────────────────────────────────────────────────
 export interface MarketRequest {
   crop: string

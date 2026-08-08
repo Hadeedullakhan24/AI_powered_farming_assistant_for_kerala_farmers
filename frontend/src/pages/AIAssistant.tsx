@@ -15,15 +15,28 @@ const BROWSER_LANG_MAP: Record<string, string> = {
   en: 'en-IN', ml: 'ml-IN', hi: 'hi-IN', ta: 'ta-IN', kn: 'kn-IN', te: 'te-IN',
 }
 
-// Strip markdown/emojis before speaking
+// Strip markdown/emojis and extract concise text for speech synthesis
 function cleanForSpeech(raw: string): string {
-  return raw
+  let cleaned = raw
+    .replace(/```[\s\S]*?```/g, '')
     .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
     .replace(/#/g, '')
-    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
-    .replace(/[•·]/g, '')
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    .replace(/[-•·]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+
+  // Extract first 2-3 sentences (up to ~300 chars) for speech synthesis.
+  // This keeps speech crisp, clear, and prevents browser/backend TTS buffer loops or stuttering.
+  const sentences = cleaned.match(/[^.!?]+[.!?]+/g)
+  if (sentences && sentences.length > 0) {
+    return sentences.slice(0, 3).join(' ')
+  }
+  if (cleaned.length > 300) {
+    return cleaned.slice(0, 300) + '.'
+  }
+  return cleaned
 }
 
 const WELCOME_MESSAGES: Record<string, string> = {

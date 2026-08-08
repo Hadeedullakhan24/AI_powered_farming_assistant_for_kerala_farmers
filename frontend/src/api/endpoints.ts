@@ -6,6 +6,8 @@ import type {
   WeatherResponse,
   CropAdvisoryRequest,
   CropAdvisoryResponse,
+  DiseaseIntelligenceRequest,
+  DiseaseIntelligenceResponse,
   MarketRequest,
   MarketResponse,
   ChatRequest,
@@ -43,6 +45,13 @@ export const getCropAdvisory = async (
   body: CropAdvisoryRequest
 ): Promise<CropAdvisoryResponse> => {
   const res = await apiClient.post<CropAdvisoryResponse>('/api/crop-advisor', body)
+  return res.data
+}
+
+export const getCropDiseaseIntelligence = async (
+  body: DiseaseIntelligenceRequest
+): Promise<DiseaseIntelligenceResponse> => {
+  const res = await apiClient.post<DiseaseIntelligenceResponse>('/api/crop-disease-intelligence', body)
   return res.data
 }
 
