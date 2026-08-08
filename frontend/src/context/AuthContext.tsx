@@ -56,15 +56,21 @@ const fetchWithRetry = async (url: string, options: RequestInit = {}, retries = 
 }
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
-  // Pre-populate user from cache so ProtectedRoute doesn't flash a redirect
+  // Clear persistent legacy localStorage so previous names don't linger across app runs
+  useEffect(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('hk_user')
+  }, [])
+
+  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('token'))
+  // Pre-populate user from session cache so ProtectedRoute doesn't flash a redirect
   const [user, setUser] = useState<User | null>(() => {
     try {
-      const cached = localStorage.getItem('hk_user')
+      const cached = sessionStorage.getItem('hk_user')
       return cached ? JSON.parse(cached) : null
     } catch { return null }
   })
-  const [loading, setLoading] = useState<boolean>(() => !!localStorage.getItem('token'))
+  const [loading, setLoading] = useState<boolean>(() => !!sessionStorage.getItem('token'))
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false)
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login')
 
@@ -80,7 +86,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Restore session on app load
   useEffect(() => {
     const restoreSession = async () => {
-      const savedToken = localStorage.getItem('token')
+      const savedToken = sessionStorage.getItem('token')
       if (!savedToken) {
         setLoading(false)
         return
@@ -98,11 +104,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const currentUser = data.user || data
           setUser(currentUser)
           setToken(savedToken)
-          localStorage.setItem('hk_user', JSON.stringify(currentUser))
+          sessionStorage.setItem('hk_user', JSON.stringify(currentUser))
           if (currentUser?.preferredLanguage) {
             i18n.changeLanguage(currentUser.preferredLanguage)
           }
         } else {
+          sessionStorage.removeItem('token')
+          sessionStorage.removeItem('hk_user')
           localStorage.removeItem('token')
           localStorage.removeItem('hk_user')
           setToken(null)
@@ -110,7 +118,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       } catch (err) {
         console.warn('Could not restore session:', err)
-        // Keep cached user on network error so the app stays usable offline
       }
       setLoading(false)
     }
@@ -140,8 +147,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const jwtToken = data.token
     const userData = data.user || data
 
-    localStorage.setItem('token', jwtToken)
-    localStorage.setItem('hk_user', JSON.stringify(userData))
+    sessionStorage.setItem('token', jwtToken)
+    sessionStorage.setItem('hk_user', JSON.stringify(userData))
+    localStorage.removeItem('token')
+    localStorage.removeItem('hk_user')
     setToken(jwtToken)
     setUser(userData)
 
@@ -175,8 +184,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const jwtToken = data.token
     const userData = data.user || data
 
-    localStorage.setItem('token', jwtToken)
-    localStorage.setItem('hk_user', JSON.stringify(userData))
+    sessionStorage.setItem('token', jwtToken)
+    sessionStorage.setItem('hk_user', JSON.stringify(userData))
+    localStorage.removeItem('token')
+    localStorage.removeItem('hk_user')
     setToken(jwtToken)
     setUser(userData)
 
@@ -189,6 +200,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }
 
   const logout = useCallback(() => {
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('hk_user')
     localStorage.removeItem('token')
     localStorage.removeItem('hk_user')
     setToken(null)
@@ -196,7 +209,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [])
 
   const updateLanguage = async (preferredLanguage: string): Promise<void> => {
-    const currentToken = localStorage.getItem('token') || token
+    const currentToken = sessionStorage.getItem('token') || token
     if (!currentToken) return
     try {
       const res = await fetchWithRetry(`${DEFAULT_API_BASE}/api/auth/language`, {

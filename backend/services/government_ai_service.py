@@ -241,7 +241,11 @@ Return ONLY valid JSON.
         b_scheme["scheme_id"] = matched_scheme.get("scheme_id")
         b_scheme["scheme_name"] = matched_scheme.get("scheme_name")
         b_scheme["official_website"] = matched_scheme.get("official_website")
-        b_scheme["official_apply_link"] = matched_scheme.get("official_apply_link")
+        b_scheme["official_apply_link"] = (
+            matched_scheme.get("official_apply_link")
+            or matched_scheme.get("official_website")
+            or ""
+        )
         if not b_scheme.get("benefits"):
             b_scheme["benefits"] = matched_scheme.get("benefits")
         parsed["best_scheme"] = b_scheme
@@ -261,7 +265,11 @@ Return ONLY valid JSON.
         b_loan["interest_rate"] = matched_loan.get("interest_rate")
         b_loan["repayment"] = matched_loan.get("repayment_details", b_loan.get("repayment", ""))
         b_loan["official_website"] = matched_loan.get("official_website")
-        b_loan["official_apply_link"] = matched_loan.get("official_apply_link")
+        b_loan["official_apply_link"] = (
+            matched_loan.get("official_apply_link")
+            or matched_loan.get("official_website")
+            or ""
+        )
         parsed["best_loan"] = b_loan
 
     return parsed

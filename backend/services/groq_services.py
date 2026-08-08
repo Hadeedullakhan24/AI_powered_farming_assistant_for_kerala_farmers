@@ -129,96 +129,105 @@ Return ONLY valid JSON.
         }
 
 
-def get_crop_advice(
+def get_crop_advice(
     weather_data: dict,
     soil_type: str,
     irrigation: str,
     season: str,
 ):
-    prompt = f"""
-You are an expert agricultural scientist and AI farming advisor for Indian farmers.
+    resolved_place_name = weather_data.get("location", "Kerala, India")
+    lat = weather_data.get("latitude", "")
+    lng = weather_data.get("longitude", "")
+    temp = weather_data.get("temperature", 28)
 
-Analyze the given farming conditions and recommend the FIVE most suitable crops.
+    additional_weather = (
+        f"Feels like: {weather_data.get('feels_like', temp)}°C, "
+        f"Humidity: {weather_data.get('humidity', 75)}%, "
+        f"Condition: {weather_data.get('condition', 'Tropical')}, "
+        f"Rainfall: {weather_data.get('total_precipitation', 0)}mm, "
+        f"Season: {season}"
+    )
 
-Current Conditions
+    system_prompt = """You are an agricultural advisory engine for Indian farmers. Given a farm's location, soil type,
+irrigation method, and current weather conditions, you recommend the best crops to grow and
+return your answer as a single JSON object — nothing else, no markdown, no commentary outside
+the JSON.
 
-Location: {weather_data["location"]}
-Temperature: {weather_data["temperature"]} °C
-Feels Like: {weather_data["feels_like"]} °C
-Humidity: {weather_data["humidity"]} %
-Weather Condition: {weather_data["condition"]}
-Chance of Rain: {weather_data["chance_of_rain"]} %
-Rainfall: {weather_data["total_precipitation"]} mm
-Wind Speed: {weather_data["wind_speed"]} km/h
-UV Index: {weather_data["uv_index"]}
-Soil Type: {soil_type}
-Irrigation: {irrigation}
-Season: {season}
+RULES:
+1. Base every recommendation on real agronomic knowledge for the given region — soil type,
+   irrigation availability, climate, and typical cropping patterns actually used there. Do not
+   invent crops, varieties, or figures that would not realistically apply to that region.
+2. If the resolved location name looks incorrect, unusual, or outside India for what should be
+   an Indian farm, still generate your best answer based on the coordinates/soil/irrigation
+   given, but do not fabricate a fictional regional context to match a wrong location name.
+3. Confidence and suitability_score are integers 0-100, reflecting how well-suited the crop
+   genuinely is to the given soil, irrigation, and climate inputs — vary these meaningfully
+   across crops, don't cluster every crop near the same score.
+4. Always return exactly 5 crops in "recommended_crops", ranked 1-5 by suitability, and exactly
+   2 crops in "not_recommended" with a genuine agronomic reason each is unsuitable.
+5. For EVERY crop in "recommended_crops" and in "best_crop", include a "varieties" array of
+   2-4 real, commonly grown varieties for that crop in that region, each with a short
+   suitability_note tied to the specific soil/irrigation/climate given — not a generic
+   description of the crop itself. If uncertain a named variety is truly appropriate for the
+   region, say so honestly in the note rather than inventing a plausible-sounding name.
+6. All narrative fields (summary, reason, why_recommended, suitability_note) must be concise,
+   farmer-readable, and specific to the actual inputs — avoid generic filler sentences that
+   could apply to any location.
+7. Output ONLY valid JSON matching the exact schema below. No trailing commas, no comments,
+   no text before or after the JSON object.
 
-Return ONLY valid JSON in the following format.
-
-{{
-  "location": "",
-  "summary": "",
-
-  "best_crop": {{
-    "crop": "",
-    "confidence": 0,
-    "reason": ""
-  }},
-
+OUTPUT SCHEMA (return exactly this structure and these field names):
+{
+  "location": string,                         // resolved place name, e.g. "Kannur, Kerala"
+  "summary": string,                          // 1-2 sentences tying soil+irrigation+climate to the recommendation
+  "best_crop": {
+    "crop": string,
+    "confidence": integer,                    // 0-100
+    "reason": string,
+    "varieties": [
+      { "name": string, "suitability_note": string, "expected_yield": string }
+    ]
+  },
   "recommended_crops": [
-    {{
-      "recommendation_rank": 1,
-      "crop": "",
-      "confidence": 0,
-      "suitability_score": 0,
-
-      "why_recommended": [
-        "",
-        "",
-        ""
+    {
+      "recommendation_rank": integer,         // 1-5
+      "crop": string,
+      "confidence": integer,
+      "suitability_score": integer,
+      "why_recommended": [string],            // 2-4 short bullet reasons
+      "varieties": [
+        { "name": string, "suitability_note": string, "expected_yield": string }
       ],
-
-      "best_sowing_time": "",
-      "crop_duration": "",
-      "water_requirement": "",
-      "expected_yield": "",
-      "market_demand": "",
-      "profitability": "",
-      "possible_risks": [
-        "",
-        ""
-      ]
-    }}
+      "best_sowing_time": string,
+      "crop_duration": string,
+      "water_requirement": string,
+      "expected_yield": string,
+      "market_demand": "Low" | "Medium" | "High",
+      "profitability": "Low" | "Moderate" | "High" | "Very High",
+      "possible_risks": [string]               // 2-3 realistic pest/disease/weather risks
+    }
+    // exactly 5 of these, rank 1 to 5
   ],
-
   "not_recommended": [
-    {{
-      "crop": "",
-      "reason": ""
-    }}
+    { "crop": string, "reason": string }
+    // exactly 2 of these
   ]
-}}
+}
 
-Rules:
+Do not add extra top-level or nested fields beyond this schema. Do not duplicate fields under
+different names (e.g. do not also add "name" or "rank" alongside "crop" and
+"recommendation_rank" — use only the field names given above)."""
 
-1. Recommend EXACTLY 5 crops.
-2. Rank the crops from highest suitability to lowest.
-3. recommendation_rank should start from 1.
-4. confidence should be between 0 and 100.
-5. suitability_score should be between 0 and 100.
-6. Select ONE best crop with confidence score.
-7. Give a professional summary in 2-3 sentences explaining why these crops are suitable.
-8. why_recommended must contain 3-5 short reasons.
-9. possible_risks should mention realistic agricultural risks.
-10. Recommend EXACTLY 2 unsuitable crops.
-11. Keep reasons concise and practical.
-12. Base recommendations ONLY on the provided weather, soil, irrigation and season.
-13. Return ONLY JSON.
-14. Do NOT use markdown.
-15. Do NOT add explanations outside JSON.
-"""
+    user_prompt = f"""Generate a crop advisory for the following farm:
+
+Location: {resolved_place_name}   (resolved from lat {lat}, lng {lng})
+Soil type: {soil_type}
+Irrigation type: {irrigation}
+Current temperature: {temp}°C
+{additional_weather}
+
+Return the JSON object as specified in the system prompt, with recommendations genuinely
+tailored to this soil, irrigation, and climate combination."""
 
     try:
         response = client.chat.completions.create(
@@ -226,15 +235,15 @@ Rules:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are India's best AI agricultural advisor. Provide accurate crop recommendations matching requested JSON schema."
+                    "content": system_prompt
                 },
                 {
                     "role": "user",
-                    "content": prompt
+                    "content": user_prompt
                 }
             ],
-            temperature=0.2,
-            max_tokens=2200
+            temperature=0.3,
+            max_tokens=2500
         )
 
         result = response.choices[0].message.content.strip()
@@ -243,12 +252,16 @@ Rules:
     except Exception as e:
         print("Groq Crop Advice Error:", e)
         return {
-            "location": weather_data.get("location", "Kerala"),
-            "summary": f"Based on current temperature of {weather_data.get('temperature', 28)}°C, soil condition ({soil_type}), and irrigation ({irrigation}), paddy and coconut are highly recommended for optimal yield.",
+            "location": resolved_place_name,
+            "summary": f"Based on current temperature of {temp}°C, soil condition ({soil_type}), and irrigation ({irrigation}), paddy and coconut are highly recommended for optimal yield.",
             "best_crop": {
                 "crop": "Paddy (Rice)",
                 "confidence": 92,
-                "reason": "Ideal humidity, warm climate, and irrigation support high yield for paddy cultivation in Kerala."
+                "reason": "Ideal humidity, warm climate, and irrigation support high yield for paddy cultivation in Kerala.",
+                "varieties": [
+                    {"name": "Uma (MO 16)", "suitability_note": "High yielding, flood tolerant variety widely grown in Kerala.", "expected_yield": "3.2 tons/acre"},
+                    {"name": "Jyothi", "suitability_note": "Short duration, pest resistant rice suitable for wet soil.", "expected_yield": "2.8 tons/acre"}
+                ]
             },
             "recommended_crops": [
                 {
@@ -257,6 +270,10 @@ Rules:
                     "confidence": 92,
                     "suitability_score": 94,
                     "why_recommended": ["High humidity tolerance", "Favorable water availability", "Local soil compatibility"],
+                    "varieties": [
+                        {"name": "Uma (MO 16)", "suitability_note": "High yielding, flood tolerant variety widely grown in Kerala.", "expected_yield": "3.2 tons/acre"},
+                        {"name": "Jyothi", "suitability_note": "Short duration, pest resistant rice suitable for wet soil.", "expected_yield": "2.8 tons/acre"}
+                    ],
                     "best_sowing_time": "June - July (Kharif)",
                     "crop_duration": "110-130 days",
                     "water_requirement": "1200-1400 mm",
@@ -271,6 +288,10 @@ Rules:
                     "confidence": 88,
                     "suitability_score": 90,
                     "why_recommended": ["Tropical climate match", "Consistent market pricing", "Perennial yield"],
+                    "varieties": [
+                        {"name": "West Coast Tall", "suitability_note": "Traditional hardy variety suited for all Kerala soils.", "expected_yield": "80 nuts/tree/year"},
+                        {"name": "Chowghat Orange Dwarf", "suitability_note": "Early bearing tender coconut variety.", "expected_yield": "110 nuts/tree/year"}
+                    ],
                     "best_sowing_time": "May - June",
                     "crop_duration": "Perennial (5-6 years to fruit)",
                     "water_requirement": "1000-1200 mm",
@@ -285,6 +306,10 @@ Rules:
                     "confidence": 84,
                     "suitability_score": 85,
                     "why_recommended": ["Excellent cash crop", "High export value", "Thrives in humid climate"],
+                    "varieties": [
+                        {"name": "Panniyur 1", "suitability_note": "High yielding hybrid suitable for shaded agroforestry.", "expected_yield": "2.2 kg dry pepper/vine"},
+                        {"name": "Karimunda", "suitability_note": "Popular local landrace with strong disease resistance.", "expected_yield": "1.8 kg dry pepper/vine"}
+                    ],
                     "best_sowing_time": "June - August",
                     "crop_duration": "Perennial (3 years to yield)",
                     "water_requirement": "1500-2000 mm",
@@ -299,6 +324,10 @@ Rules:
                     "confidence": 80,
                     "suitability_score": 82,
                     "why_recommended": ["High domestic demand", "Short crop cycle", "Good market liquidity"],
+                    "varieties": [
+                        {"name": "Nendran", "suitability_note": "Premium plantain variety for chips and culinary use.", "expected_yield": "14 kg/bunch"},
+                        {"name": "Grand Naine", "suitability_note": "High yielding Cavendish table banana.", "expected_yield": "25 kg/bunch"}
+                    ],
                     "best_sowing_time": "September - October",
                     "crop_duration": "10-12 months",
                     "water_requirement": "1200-1500 mm",
@@ -313,6 +342,10 @@ Rules:
                     "confidence": 75,
                     "suitability_score": 78,
                     "why_recommended": ["Low maintenance", "Drought tolerant", "Good soil adaptability"],
+                    "varieties": [
+                        {"name": "M4", "suitability_note": "Popular non-bitter culinary variety.", "expected_yield": "12 tons/acre"},
+                        {"name": "Sree Padmanabha", "suitability_note": "Mosaic virus resistant cassava variety.", "expected_yield": "14 tons/acre"}
+                    ],
                     "best_sowing_time": "April - May",
                     "crop_duration": "8-10 months",
                     "water_requirement": "800-1000 mm",
@@ -335,9 +368,7 @@ Rules:
         }
 
 
-
-import json
-def _to_bool(val, default=False):
+def _to_bool(val, default=False):
     if isinstance(val, bool):
         return val
     if isinstance(val, str):

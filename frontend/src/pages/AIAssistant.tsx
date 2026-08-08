@@ -1,13 +1,30 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import i18n from '../i18n'
-import { Send, MessageCircle, Sparkles, Zap, Bot, RotateCcw, Copy, Check } from 'lucide-react'
+import { Send, MessageCircle, Sparkles, Zap, Bot, RotateCcw, Copy, Check, Volume2, VolumeX } from 'lucide-react'
 import { PageTransition } from '../components/shared/PageTransition'
 import { VoiceInput } from '../components/VoiceInput'
 import { SpeakButton } from '../components/SpeakButton'
 import { sendChatMessage } from '../api/endpoints'
 import type { ChatMessage } from '../api/types'
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
+const BROWSER_LANG_MAP: Record<string, string> = {
+  en: 'en-IN', ml: 'ml-IN', hi: 'hi-IN', ta: 'ta-IN', kn: 'kn-IN', te: 'te-IN',
+}
+
+// Strip markdown/emojis before speaking
+function cleanForSpeech(raw: string): string {
+  return raw
+    .replace(/\*\*/g, '')
+    .replace(/#/g, '')
+    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+    .replace(/[•·]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 const WELCOME_MESSAGES: Record<string, string> = {
   ml: '🌿 നമസ്കാരം! ഞാൻ **HexaKrishi AI Assistant** ആണ്, കേരളത്തിലെ കർഷകർക്കുള്ള AI കൃഷി സഹായി.\n\nഞാൻ ഇവ ഉൾക്കൊള്ളുന്നു:\n• 🦠 വിള രോഗ കണ്ടുപിടിത്തം\n• 🌤️ കാലാവസ്ഥ അടിസ്ഥാനമാക്കിയ കൃഷി ഉപദേശം\n• 📈 വിപണി വിലകൾ\n• 🌱 വിള തിരഞ്ഞെടുക്കൽ\n\nഎന്തും ചോദിക്കൂ!',
@@ -128,6 +145,9 @@ export const AIAssistant = () => {
   ])
   const [input, setInput] = useState('')
   const [isThinking, setIsThinking] = useState(false)
+  // Auto-speak: on by default so replies are read aloud automatically
+  const [autoSpeak, setAutoSpeak] = useState(true)
+  const autoSpeakAudioRef = useRef<HTMLAudioElement | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -145,10 +165,103 @@ export const AIAssistant = () => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isThinking])
 
+  // Stop any ongoing auto-speech (both Web Speech and backend audio)
+  const stopAutoSpeech = useCallback(() => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    if (autoSpeakAudioRef.current) {
+      autoSpeakAudioRef.current.pause()
+      autoSpeakAudioRef.current.src = ''
+      autoSpeakAudioRef.current = null
+    }
+  }, [])
+
+  // Use backend TTS — produces clean, reliable audio without echo
+  const fallbackSpeak = useCallback(async (spokenText: string, targetLang: string) => {
+    // Cancel any Web Speech to avoid overlap
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    try {
+      const form = new FormData()
+      form.append('text', spokenText)
+      form.append('lang', targetLang)
+      const res = await fetch(`${API_BASE}/api/speak`, { method: 'POST', body: form })
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      autoSpeakAudioRef.current = audio
+      audio.onended = () => { URL.revokeObjectURL(url); autoSpeakAudioRef.current = null }
+      audio.onerror = () => { URL.revokeObjectURL(url); autoSpeakAudioRef.current = null }
+      await audio.play()
+    } catch (err) {
+      console.warn('[AIAssistant] Backend TTS error:', err)
+    }
+  }, [])
+
+  // Auto-speak the AI reply — tries Web Speech first, falls back to backend TTS on error
+  const speakText = useCallback(async (raw: string) => {
+    const spokenText = cleanForSpeech(raw)
+    if (!spokenText) return
+
+    const targetLang = i18n.language || 'en'
+    const browserLang = BROWSER_LANG_MAP[targetLang] || 'en-IN'
+
+    // Always stop previous audio before starting new
+    stopAutoSpeech()
+
+    // Check if browser Web Speech has voices available for this language
+    const voices = 'speechSynthesis' in window ? window.speechSynthesis.getVoices() : []
+    const matchedVoice = voices.find(v => v.lang.startsWith(targetLang) || v.lang.startsWith(browserLang))
+
+    // If no matching voice found, go straight to backend TTS (avoids garbled/robotic audio)
+    if (!matchedVoice) {
+      await fallbackSpeak(spokenText, targetLang)
+      return
+    }
+
+    // Use Web Speech with the matched voice
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(spokenText)
+    utterance.lang = browserLang
+    utterance.voice = matchedVoice
+    utterance.rate = 0.95
+
+    const startedRef = { value: false }
+    const fallbackTimer = setTimeout(() => {
+      // Only fall back if speech never actually started after 1.5s
+      // (longer delay avoids false triggers on longer texts)
+      if (!startedRef.value && !window.speechSynthesis.speaking) {
+        fallbackSpeak(spokenText, targetLang)
+      }
+    }, 1500)
+
+    utterance.onstart = () => {
+      startedRef.value = true
+      clearTimeout(fallbackTimer)
+    }
+
+    utterance.onend = () => {
+      clearTimeout(fallbackTimer)
+    }
+
+    utterance.onerror = (e) => {
+      clearTimeout(fallbackTimer)
+      // Only fall back to backend TTS if speech never actually played
+      if (!startedRef.value) {
+        fallbackSpeak(spokenText, targetLang)
+      }
+      console.warn('[AIAssistant] Web Speech error:', e.error)
+    }
+
+    window.speechSynthesis.speak(utterance)
+  }, [stopAutoSpeech, fallbackSpeak])
+
   const handleSend = async (msg?: string) => {
     const text = (msg ?? input).trim()
     if (!text || isThinking) return
     setInput('')
+
+    // Stop any ongoing speech when user sends a new message
+    stopAutoSpeech()
 
     const newMsg: ChatMessage = { role: 'user', content: text }
     const history = [...messages, newMsg]
@@ -161,22 +274,21 @@ export const AIAssistant = () => {
         conversation_history: history.slice(-10),
         lang: i18n.language || 'en',
       })
-      setMessages([...history, { role: 'assistant', content: res.reply }])
+      const reply = res.reply
+      setMessages([...history, { role: 'assistant', content: reply }])
+      // Auto-speak the AI reply if enabled
+      if (autoSpeak) speakText(reply)
     } catch {
-      setMessages([
-        ...history,
-        {
-          role: 'assistant',
-          content:
-            '⚠️ Could not reach the AI service right now. Please try again in a moment.',
-        },
-      ])
+      const errMsg = '⚠️ Could not reach the AI service right now. Please try again in a moment.'
+      setMessages([...history, { role: 'assistant', content: errMsg }])
+      if (autoSpeak) speakText(errMsg)
     } finally {
       setIsThinking(false)
     }
   }
 
   const handleClear = () => {
+    stopAutoSpeech()
     setMessages([{ role: 'assistant', content: welcomeMsg }])
   }
 
@@ -255,6 +367,29 @@ export const AIAssistant = () => {
                 />
                 {t('assistant_online', 'AI Assistant · Online')}
               </div>
+              {/* Auto-speak toggle */}
+              <button
+                id="assistant-autospeak-btn"
+                onClick={() => { setAutoSpeak(prev => { if (prev) stopAutoSpeech(); return !prev }) }}
+                title={autoSpeak ? 'Auto-speak ON — click to mute replies' : 'Auto-speak OFF — click to enable voice replies'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: `1.5px solid ${autoSpeak ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  background: autoSpeak ? '#E8F5E9' : 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  color: autoSpeak ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                  fontFamily: 'Inter, sans-serif',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {autoSpeak ? <Volume2 size={13} /> : <VolumeX size={13} />}
+                {autoSpeak ? 'Voice On' : 'Voice Off'}
+              </button>
               <button
                 id="assistant-clear-btn"
                 onClick={handleClear}
